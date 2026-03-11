@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<drachtio>
+  <!-- Admin: Node.js app connects here. Bind 127.0.0.1 when app runs on same machine; use 0.0.0.0 if app runs in another container/server. -->
+  <admin port="9022" secret="cymru">127.0.0.1</admin>
+  <!-- SIP: listen on all interfaces, standard port 5060 (UDP) for incoming calls -->
+  <sip>
+    <contacts>
+      <contact>sip:*;transport=udp</contact>
+    </contacts>
+  </sip>
+</drachtio>
