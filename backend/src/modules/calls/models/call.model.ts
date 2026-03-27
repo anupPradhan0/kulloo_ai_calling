@@ -1,7 +1,7 @@
 import { model, Schema, Types } from "mongoose";
 
 export type CallDirection = "inbound" | "outbound";
-export type CallProvider = "sip-local" | "twilio" | "plivo";
+export type CallProvider = "sip-local" | "twilio" | "plivo" | "freeswitch";
 export type CallStatus =
   | "received"
   | "initiated"
@@ -42,7 +42,7 @@ export interface CallDocument {
 const callSchema = new Schema<CallDocument>(
   {
     direction: { type: String, enum: ["inbound", "outbound"], required: true },
-    provider: { type: String, enum: ["sip-local", "twilio", "plivo"], required: true },
+    provider: { type: String, enum: ["sip-local", "twilio", "plivo", "freeswitch"], required: true },
     from: { type: String, required: true, trim: true },
     to: { type: String, required: true, trim: true },
     status: { type: String, required: true },

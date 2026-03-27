@@ -7,6 +7,8 @@ import { InboundHelloInput, OutboundHelloInput } from "../validators/call.schema
 import { TelephonyAdapter } from "../adapters/telephony.adapter";
 import { CallDocument, CallProvider, CallStatus } from "../models/call.model";
 import { RecordingDocument } from "../models/recording.model";
+import path from "node:path";
+import fs from "node:fs/promises";
 
 interface HelloFlowResult {
   call: CallDocument;
@@ -193,6 +195,86 @@ export class CallService {
       durationSec: Number(payload.RecordingDuration ?? 0),
       retrievalUrl: payload.RecordingUrl,
     });
+  }
+
+  async ingestPlivoRecordingCallback(
+    callUuid: string,
+    payload: {
+      RecordingID: string;
+      RecordUrl?: string;
+      RecordingDuration?: string;
+      RecordingDurationMs?: string;
+    },
+  ): Promise<RecordingDocument> {
+    const call = await this.callRepository.findByProviderCallId(callUuid);
+    if (!call) {
+      throw new ApiError("Call not found for Plivo recording callback", 404);
+    }
+
+    const existingByProviderId = await this.recordingRepository.findByProviderRecordingId(payload.RecordingID);
+    if (existingByProviderId) {
+      const updated = await this.recordingRepository.updateById(existingByProviderId._id.toString(), {
+        status: "completed",
+        retrievalUrl: payload.RecordUrl,
+        durationSec: Number(payload.RecordingDuration ?? 0),
+      });
+      if (!updated) {
+        throw new ApiError("Unable to update Plivo recording", 500);
+      }
+      return updated;
+    }
+
+    const pending = await this.recordingRepository.findPendingByCallId(call._id.toString());
+    if (pending) {
+      const updated = await this.recordingRepository.updateById(pending._id.toString(), {
+        providerRecordingId: payload.RecordingID,
+        status: "completed",
+        retrievalUrl: payload.RecordUrl,
+        durationSec: Number(payload.RecordingDuration ?? 0),
+      });
+      if (!updated) {
+        throw new ApiError("Unable to finalize Plivo recording", 500);
+      }
+      return updated;
+    }
+
+    return this.recordingRepository.create({
+      callId: call._id,
+      provider: "plivo",
+      providerRecordingId: payload.RecordingID,
+      status: "completed",
+      retrievalUrl: payload.RecordUrl,
+      durationSec: Number(payload.RecordingDuration ?? 0),
+    });
+  }
+
+  async registerFreeswitchRecording(callUuid: string): Promise<RecordingDocument> {
+    const call = await this.callRepository.findByProviderCallId(callUuid);
+    if (!call) {
+      throw new ApiError("Call not found", 404);
+    }
+
+    const recordingsDir = process.env.RECORDINGS_DIR
+      ? path.resolve(process.env.RECORDINGS_DIR)
+      : path.resolve(process.cwd(), "..", "recordings");
+    const filePath = path.join(recordingsDir, `${callUuid}.wav`);
+
+    try {
+      await fs.stat(filePath);
+    } catch {
+      throw new ApiError("Recording file not found yet", 404);
+    }
+
+    const recording = await this.recordingRepository.create({
+      callId: call._id,
+      provider: "freeswitch",
+      providerRecordingId: callUuid,
+      status: "completed",
+      filePath,
+      retrievalUrl: `/api/recordings/${callUuid}/file`,
+    });
+
+    return recording;
   }
 
   private async setStatus(

@@ -1,10 +1,13 @@
 import { NextFunction, Request, Response } from "express";
+import path from "node:path";
 import { ApiError } from "../../../utils/api-error";
 import { parseWithSchema } from "../../../utils/zod-validate";
 import {
   callIdParamSchema,
   inboundHelloSchema,
   outboundHelloSchema,
+  plivoRecordingCallbackQuerySchema,
+  plivoRecordingCallbackSchema,
   recordingIdParamSchema,
   twilioRecordingCallbackSchema,
 } from "../validators/call.schema";
@@ -57,10 +60,36 @@ export async function getRecording(req: Request, res: Response, next: NextFuncti
   }
 }
 
+export async function getRecordingFile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { recordingId } = parseWithSchema(recordingIdParamSchema, req.params);
+    const recording = await callService.getRecordingById(recordingId);
+
+    if (!recording.filePath) {
+      throw new ApiError("Recording file is not available", 404);
+    }
+
+    res.sendFile(path.resolve(recording.filePath));
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function twilioRecordingCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const payload = parseWithSchema(twilioRecordingCallbackSchema, req.body);
     const recording = await callService.ingestTwilioRecordingCallback(payload);
+    res.status(200).json({ success: true, data: recording });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function plivoRecordingCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { callUuid } = parseWithSchema(plivoRecordingCallbackQuerySchema, req.query);
+    const payload = parseWithSchema(plivoRecordingCallbackSchema, req.body);
+    const recording = await callService.ingestPlivoRecordingCallback(callUuid, payload);
     res.status(200).json({ success: true, data: recording });
   } catch (error) {
     next(error);

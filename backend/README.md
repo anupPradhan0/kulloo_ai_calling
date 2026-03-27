@@ -43,6 +43,15 @@ Base URL: `http://localhost:5000/api`
   Fetch one recording metadata
 - `POST /calls/callbacks/twilio/recording`  
   Optional callback to finalize Twilio recording metadata
+- `POST /calls/callbacks/plivo/recording`  
+  Plivo recording callback (used by `/plivo/answer` XML `callbackUrl`)
+
+## Plivo local testing (ngrok)
+- Start ngrok: `ngrok http 5000`
+- Set:
+  - `PUBLIC_BASE_URL=https://<your-ngrok-domain>`
+  - `PLIVO_ANSWER_URL=https://<your-ngrok-domain>/plivo/answer`
+  - `PLIVO_HANGUP_URL=https://<your-ngrok-domain>/plivo/hangup`
 
 ## Sample Requests
 Inbound hello call:

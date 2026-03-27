@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const providerSchema = z.enum(["sip-local", "twilio", "plivo"]);
+const providerSchema = z.enum(["sip-local", "twilio", "plivo", "freeswitch"]);
 
 export const inboundHelloSchema = z.object({
   from: z.string().trim().min(1, "from is required"),
@@ -31,6 +31,17 @@ export const twilioRecordingCallbackSchema = z.object({
   RecordingUrl: z.string().trim().url().optional(),
   RecordingDuration: z.string().trim().optional(),
   RecordingStatus: z.string().trim().optional(),
+});
+
+export const plivoRecordingCallbackSchema = z.object({
+  RecordingID: z.string().trim().min(1),
+  RecordUrl: z.string().trim().url().optional(),
+  RecordingDuration: z.string().trim().optional(),
+  RecordingDurationMs: z.string().trim().optional(),
+});
+
+export const plivoRecordingCallbackQuerySchema = z.object({
+  callUuid: z.string().trim().min(1),
 });
 
 export type InboundHelloInput = z.infer<typeof inboundHelloSchema>;

@@ -89,6 +89,7 @@ export class TelephonyAdapter {
     const authId = process.env.PLIVO_AUTH_ID;
     const authToken = process.env.PLIVO_AUTH_TOKEN;
     const answerUrl = process.env.PLIVO_ANSWER_URL;
+    const hangupUrl = process.env.PLIVO_HANGUP_URL;
 
     if (!authId || !authToken) {
       throw new ApiError("Missing Plivo credentials for provider=plivo", 400);
@@ -106,6 +107,7 @@ export class TelephonyAdapter {
       answerUrl,
       {
         answerMethod: "GET",
+        ...(hangupUrl ? { hangupUrl, hangupMethod: "POST" } : {}),
       },
     );
 

@@ -36,4 +36,26 @@ export class RecordingRepository {
     }
     return RecordingModel.findByIdAndUpdate(id, { status, ...patch }, { new: true, runValidators: true });
   }
+
+  async updateById(
+    id: string,
+    patch: Partial<
+      Pick<
+        RecordingDocument,
+        "providerRecordingId" | "status" | "durationSec" | "retrievalUrl" | "filePath"
+      >
+    >,
+  ): Promise<RecordingDocument | null> {
+    if (!Types.ObjectId.isValid(id)) {
+      return null;
+    }
+    return RecordingModel.findByIdAndUpdate(id, patch, { new: true, runValidators: true });
+  }
+
+  async findPendingByCallId(callId: string): Promise<RecordingDocument | null> {
+    if (!Types.ObjectId.isValid(callId)) {
+      return null;
+    }
+    return RecordingModel.findOne({ callId, status: "pending" }).sort({ createdAt: -1 });
+  }
 }

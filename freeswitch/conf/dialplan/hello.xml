@@ -1,0 +1,16 @@
+<include>
+  <context name="public">
+    <extension name="hello-call">
+      <condition field="destination_number" expression="^(1000|hello)$">
+        <action application="answer"/>
+        <action application="sleep" data="500"/>
+        <action application="playback" data="ivr/ivr-welcome_to_freeswitch.wav"/>
+        <action application="set" data="recording_path=/recordings/${uuid}.wav"/>
+        <action application="record_session" data="${recording_path}"/>
+        <action application="sleep" data="20000"/>
+        <action application="stop_record_session" data="${recording_path}"/>
+        <action application="hangup"/>
+      </condition>
+    </extension>
+  </context>
+</include>

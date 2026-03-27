@@ -1,9 +1,11 @@
 import { Router } from "express";
 import {
   getRecording,
+  getRecordingFile,
   inboundHelloCall,
   listCallRecordings,
   outboundHelloCall,
+  plivoRecordingCallback,
   twilioRecordingCallback,
 } from "../controllers/call.controller";
 
@@ -13,6 +15,8 @@ callRouter.post("/inbound/hello", inboundHelloCall);
 callRouter.post("/outbound/hello", outboundHelloCall);
 callRouter.get("/:callId/recordings", listCallRecordings);
 callRouter.post("/callbacks/twilio/recording", twilioRecordingCallback);
+callRouter.post("/callbacks/plivo/recording", plivoRecordingCallback);
 
 export const recordingRouter = Router();
 recordingRouter.get("/:recordingId", getRecording);
+recordingRouter.get("/:recordingId/file", getRecordingFile);
