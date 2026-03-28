@@ -33,8 +33,11 @@
     <profiles>
       <profile name="internal">
         <settings>
-          <param name="sip-ip" value="$${local_ip_v4}"/>
-          <param name="rtp-ip" value="$${local_ip_v4}"/>
+          <!-- Listen on all interfaces inside the container; advertise public IP to peers (Plivo). -->
+          <param name="sip-ip" value="0.0.0.0"/>
+          <param name="rtp-ip" value="0.0.0.0"/>
+          <param name="ext-sip-ip" value="$${external_sip_ip}"/>
+          <param name="ext-rtp-ip" value="$${external_sip_ip}"/>
           <param name="sip-port" value="5060"/>
           <param name="context" value="public"/>
           <param name="dialplan" value="XML"/>
