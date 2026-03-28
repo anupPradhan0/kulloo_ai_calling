@@ -14,7 +14,8 @@ COPY src ./src
 RUN pnpm run build
 
 # Runtime stage: production dependencies + compiled JS only
-FROM node:20-alpine AS runner
+# Dokploy (and some CI) use: docker build --target production
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
