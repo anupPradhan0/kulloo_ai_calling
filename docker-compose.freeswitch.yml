@@ -1,8 +1,15 @@
-# FreeSWITCH only — needs ./freeswitch/conf from this repo (clone or copy).
+# Kulloo FreeSWITCH — use this file in Dokploy (Compose deployment).
 #
+# Dokploy setup:
+#   1. Repo: github.com/anupPradhan0/sip (or your fork)
+#   2. Compose path: docker-compose.freeswitch.yml
+#   3. Build context / working directory: REPOSITORY ROOT (where freeswitch/ and recordings/ live)
+#   4. On deploy, Dokploy clones the repo — ./freeswitch/conf is populated from Git (no manual SSH edits)
+#
+# After deploy, open Hostinger/UFW: TCP+UDP 5060, UDP 16384-16484, plus 22/80/443 for management.
+#
+# Local test:
 #   docker compose -f docker-compose.freeswitch.yml up -d
-#
-# SIP: 5060 (udp/tcp) · ESL: host 8022 → container 8021 · RTP: 16384-16484/udp
 
 services:
   freeswitch:
@@ -15,5 +22,6 @@ services:
       - "5060:5060/tcp"
       - "16384-16484:16384-16484/udp"
     volumes:
+      # Config from repo: freeswitch/conf/{vars.xml,freeswitch.xml,dialplan/hello.xml}
       - ./freeswitch/conf:/etc/freeswitch
       - ./recordings:/recordings
