@@ -10,13 +10,14 @@ export async function connectDatabase(): Promise<void> {
       await mongoose.connect(env.mongoUri);
       return;
     } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
       if (attempt === maxAttempts) {
         throw error;
       }
 
       // eslint-disable-next-line no-console
       console.warn(
-        `MongoDB connection attempt ${attempt}/${maxAttempts} failed. Retrying in ${retryDelayMs}ms...`,
+        `MongoDB connection attempt ${attempt}/${maxAttempts} failed (${detail}). Retrying in ${retryDelayMs}ms...`,
       );
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
     }
