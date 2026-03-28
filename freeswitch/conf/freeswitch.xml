@@ -31,9 +31,9 @@
       <param name="debug-presence" value="0"/>
     </global_settings>
     <profiles>
+      <!-- Plivo sends unauthenticated INVITEs to sip:user@your-public-ip; auth-calls must be false. -->
       <profile name="internal">
         <settings>
-          <!-- Listen on all interfaces inside the container; advertise public IP to peers (Plivo). -->
           <param name="sip-ip" value="0.0.0.0"/>
           <param name="rtp-ip" value="0.0.0.0"/>
           <param name="ext-sip-ip" value="$${external_sip_ip}"/>
@@ -42,6 +42,7 @@
           <param name="context" value="public"/>
           <param name="dialplan" value="XML"/>
           <param name="disable-transcoding" value="false"/>
+          <param name="auth-calls" value="false"/>
         </settings>
       </profile>
     </profiles>
