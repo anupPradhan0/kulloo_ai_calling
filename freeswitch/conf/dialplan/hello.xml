@@ -1,5 +1,5 @@
 <include>
-  <context name="public">
+  <context name="mrf">
     <extension name="hello-call">
       <condition field="destination_number" expression="^(1000|hello)$">
         <action application="answer"/>
