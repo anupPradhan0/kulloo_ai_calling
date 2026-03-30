@@ -321,10 +321,28 @@ export class CallService {
       : path.resolve(process.cwd(), "..", "recordings");
     const filePath = path.join(recordingsDir, `${input.callUuid}.wav`);
 
-    try {
-      await fs.stat(filePath);
-    } catch {
-      throw new ApiError("Recording file not found yet", 404);
+    // Retry up to 10 times (5 seconds total) to handle race condition where
+    // the webhook arrives before FreeSWITCH finishes writing the WAV file.
+    const maxRetries = 10;
+    const retryDelayMs = 500;
+    let fileFound = false;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await fs.stat(filePath);
+        fileFound = true;
+        break;
+      } catch {
+        if (attempt < maxRetries) {
+          // eslint-disable-next-line no-console
+          console.log(`Recording file not found yet, retry ${attempt}/${maxRetries} for ${input.callUuid}`);
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      }
+    }
+
+    if (!fileFound) {
+      throw new ApiError(`Recording file not found after ${maxRetries} retries: ${filePath}`, 404);
     }
 
     const recording = await this.recordingRepository.create({
