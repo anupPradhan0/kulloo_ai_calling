@@ -21,11 +21,11 @@ services:
       --rtp-range-start 16384
       --rtp-range-end 16484
     ports:
-      - "8022:8021/tcp"
+      - "8021:8021/tcp"
       - "5060:5080/udp"
       - "5060:5080/tcp"
       - "16384-16484:16384-16484/udp"
     volumes:
-      # Only inject our hello dialplan; the image owns the rest of the config.
-      - ./freeswitch/conf/dialplan/hello.xml:/usr/local/freeswitch/conf/dialplan/hello.xml
+      # Mount our hello dialplan as mrf.xml so FreeSWITCH loads it
+      - ./freeswitch/conf/dialplan/hello.xml:/usr/local/freeswitch/conf/dialplan/mrf.xml
       - ./recordings:/recordings

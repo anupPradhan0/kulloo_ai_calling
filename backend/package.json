@@ -12,8 +12,11 @@
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "drachtio-fsmrf": "^4.1.2",
+    "drachtio-srf": "^5.0.20",
     "express": "^4.21.2",
     "helmet": "^8.1.0",
+    "modesl": "^1.1.8",
     "mongoose": "^8.13.2",
     "morgan": "^1.10.0",
     "plivo": "^4.75.8",

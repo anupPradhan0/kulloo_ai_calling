@@ -2,19 +2,8 @@
   <context name="mrf">
     <extension name="hello-call">
       <condition field="destination_number" expression="^(1000|hello)$">
-        <action application="answer"/>
-        <action application="sleep" data="500"/>
-        <!-- Play a 1-second beep to confirm audio is working (image has no sound files) -->
-        <action application="playback" data="tone_stream://%(1000,0,440)"/>
-        <action application="set" data="recording_path=/recordings/${uuid}.wav"/>
-        <action application="record_session" data="${recording_path}"/>
-        <action application="sleep" data="20000"/>
-        <action application="stop_record_session" data="${recording_path}"/>
-        <!-- Notify Kulloo backend so it can persist recording metadata in MongoDB -->
-        <action application="set" data="kulloo_webhook_url=https://kulloocall.anuppradhan.in/api/calls/callbacks/freeswitch/recording"/>
-        <action application="set" data="curl_timeout=5"/>
-        <action application="curl" data="${kulloo_webhook_url} post callUuid=${uuid}&amp;durationSec=20"/>
-        <action application="hangup"/>
+        <!-- Connect to Kulloo backend via ESL outbound socket for full programmatic control -->
+        <action application="socket" data="host.docker.internal:3200 async full"/>
       </condition>
     </extension>
   </context>

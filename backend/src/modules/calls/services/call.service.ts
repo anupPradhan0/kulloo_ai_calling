@@ -16,9 +16,9 @@ interface HelloFlowResult {
 }
 
 export class CallService {
-  private readonly callRepository = new CallRepository();
-  private readonly callEventRepository = new CallEventRepository();
-  private readonly recordingRepository = new RecordingRepository();
+  public readonly callRepository = new CallRepository();
+  public readonly callEventRepository = new CallEventRepository();
+  public readonly recordingRepository = new RecordingRepository();
   private readonly telephonyAdapter = new TelephonyAdapter();
 
   async runInboundHelloFlow(payload: InboundHelloInput): Promise<HelloFlowResult> {
@@ -365,7 +365,7 @@ export class CallService {
     return recording;
   }
 
-  private async setStatus(
+  async setStatus(
     callId: string,
     status: CallStatus,
     timestampsPatch: Record<string, Date>,
@@ -378,7 +378,7 @@ export class CallService {
     return updated;
   }
 
-  private async pushEvent(call: CallDocument, eventType: string, payload?: Record<string, unknown>): Promise<void> {
+  async pushEvent(call: CallDocument | { _id: unknown; correlationId: string }, eventType: string, payload?: Record<string, unknown>): Promise<void> {
     await this.callEventRepository.create({
       callId: call._id,
       correlationId: call.correlationId,
