@@ -1,29 +1,26 @@
 import { Server as EslServer, Connection } from "modesl";
-import { Endpoint, MediaServer } from "drachtio-fsmrf";
-import { CallControlService, RecordingMetadata } from "./call-control.service";
 import { CallService } from "../../modules/calls/services/call.service";
 import { randomUUID } from "crypto";
+import path from "path";
 
 export interface EslCallHandlerOptions {
   port: number;
   host?: string;
   recordingsDir?: string;
-  mediaServer: MediaServer;
+  mediaServer: null;
 }
 
 export class EslCallHandlerService {
   private server: EslServer | null = null;
-  private callControl: CallControlService;
   private callService: CallService;
-  private mediaServer: MediaServer;
   private port: number;
   private host: string;
+  private recordingsDir: string;
 
   constructor(options: EslCallHandlerOptions) {
     this.port = options.port;
     this.host = options.host || "0.0.0.0";
-    this.mediaServer = options.mediaServer;
-    this.callControl = new CallControlService(options.recordingsDir);
+    this.recordingsDir = options.recordingsDir || path.resolve(process.cwd(), "..", "recordings");
     this.callService = new CallService();
   }
 
@@ -57,9 +54,9 @@ export class EslCallHandlerService {
   }
 
   private async handleConnection(conn: Connection): Promise<void> {
-    let endpoint: Endpoint | null = null;
     let callUuid: string | null = null;
     let callId: string | null = null;
+    let recordingPath: string | null = null;
 
     try {
       await new Promise<void>((resolve) => {
@@ -69,17 +66,12 @@ export class EslCallHandlerService {
         });
       });
 
-      conn.execute("answer", "", () => {
-        console.log("Call answered via ESL");
-      });
-
-      conn.subscribe(["CHANNEL_ANSWER", "CHANNEL_HANGUP", "RECORD_STOP", "DTMF"], () => {
+      conn.subscribe(["CHANNEL_ANSWER", "CHANNEL_HANGUP", "RECORD_STOP"], () => {
         console.log("Subscribed to ESL events");
       });
 
       conn.api("uuid_dump", (evt) => {
         const body = evt.getBody();
-        console.log("Call variables:", body);
         
         const uuidMatch = body.match(/Channel-Call-UUID:\s*([^\s]+)/);
         const fromMatch = body.match(/Caller-Caller-ID-Number:\s*([^\s]+)/);
@@ -89,9 +81,23 @@ export class EslCallHandlerService {
         const from = fromMatch ? fromMatch[1] : "unknown";
         const to = toMatch ? toMatch[1] : "unknown";
 
-        this.executeCallFlow(conn, callUuid, from, to).catch((err) => {
+        console.log(`Processing call ${callUuid} from ${from} to ${to}`);
+
+        this.executeCallFlow(conn, callUuid, from, to).then((result) => {
+          callId = result.callId;
+          recordingPath = result.recordingPath;
+        }).catch((err) => {
           console.error("Error executing call flow:", err);
         });
+      });
+
+      conn.on("esl::event::RECORD_STOP::*", (evt) => {
+        console.log("Recording stopped event received", evt.getHeader("Record-File-Path"));
+        if (callId && callUuid && recordingPath) {
+          this.handleRecordingComplete(callId, callUuid, recordingPath).catch((err) => {
+            console.error("Error handling recording completion:", err);
+          });
+        }
       });
 
       conn.on("esl::event::CHANNEL_HANGUP::*", () => {
@@ -108,30 +114,20 @@ export class EslCallHandlerService {
 
       conn.on("esl::end", () => {
         console.log("ESL connection ended");
-        if (endpoint) {
-          this.callControl.destroyEndpoint(endpoint).catch((err) => {
-            console.error("Error destroying endpoint:", err);
-          });
-        }
       });
     } catch (error) {
       console.error("Error in ESL connection handler:", error);
-      if (endpoint) {
-        await this.callControl.destroyEndpoint(endpoint).catch(() => {});
-      }
     }
   }
 
-  private async executeCallFlow(conn: Connection, callUuid: string, from: string, to: string): Promise<void> {
-    let endpoint: Endpoint | null = null;
-
+  private async executeCallFlow(conn: Connection, callUuid: string, from: string, to: string): Promise<{ callId: string; recordingPath: string }> {
     try {
       console.log(`Executing call flow for ${callUuid} (${from} -> ${to})`);
 
       const correlationId = randomUUID();
       const now = new Date();
 
-      const call = await this.callService["callRepository"].create({
+      const call = await this.callService.callRepository.create({
         direction: "inbound",
         provider: "freeswitch",
         from,
@@ -145,66 +141,81 @@ export class EslCallHandlerService {
 
       const callId = call._id.toString();
 
-      await this.callService["pushEvent"](call, "received", { from, to, callUuid });
+      await this.callService.pushEvent(call, "received", { from, to, callUuid });
 
-      const { endpoint: ep } = await this.mediaServer.createEndpoint();
-      endpoint = ep;
-
-      await this.callService.setStatus(callId, "answered", { answeredAt: new Date() });
-      await this.callService["pushEvent"](call, "answered");
-
-      await this.callControl.sleep(endpoint, 500);
-
-      await this.callControl.playTone(endpoint, 440, 1000);
-
-      await this.callService.setStatus(callId, "played", { playedAt: new Date() });
-      await this.callService["pushEvent"](call, "played", { message: "Tone played" });
-
-      await this.callService.setStatus(callId, "recording_started", { recordingStartedAt: new Date() });
-      await this.callService["pushEvent"](call, "recording_started");
-
-      const filePath = await this.callControl.startRecording(endpoint, callUuid, async (metadata: RecordingMetadata) => {
-        console.log("Recording completed:", metadata);
-        
-        const recording = await this.callService["recordingRepository"].create({
-          callId: call._id,
-          provider: "freeswitch",
-          providerRecordingId: callUuid,
-          status: "completed",
-          durationSec: metadata.durationSec,
-          filePath: metadata.filePath,
-          retrievalUrl: `/api/recordings/local/${callUuid}`,
-        });
-
-        await this.callService["callEventRepository"].create({
-          callId: call._id,
-          correlationId: call.correlationId,
-          eventType: "recording_completed",
-          payload: { providerRecordingId: callUuid, recordingId: recording._id.toString() },
-        });
-
-        console.log("Recording metadata saved to MongoDB");
+      conn.execute("answer", "", () => {
+        console.log("Call answered");
       });
 
-      await this.callControl.sleep(endpoint, 20000);
+      await this.callService.setStatus(callId, "answered", { answeredAt: new Date() });
+      await this.callService.pushEvent(call, "answered");
 
-      await this.callControl.stopRecording(endpoint, filePath);
+      conn.execute("sleep", "500", () => {
+        console.log("Sleep 500ms complete");
+      });
 
-      await this.callService.setStatus(callId, "hangup", { hangupAt: new Date() });
-      await this.callService["pushEvent"](call, "hangup");
+      conn.execute("playback", "tone_stream://%(1000,0,440)", () => {
+        console.log("Playback complete");
+      });
 
-      await this.callControl.hangup(endpoint);
+      await this.callService.setStatus(callId, "played", { playedAt: new Date() });
+      await this.callService.pushEvent(call, "played", { message: "Tone played" });
 
-      await this.callService.setStatus(callId, "completed", { completedAt: new Date() });
-      await this.callService["pushEvent"](call, "completed");
+      const recordingPath = path.join(this.recordingsDir, `${callUuid}.wav`);
+      
+      await this.callService.setStatus(callId, "recording_started", { recordingStartedAt: new Date() });
+      await this.callService.pushEvent(call, "recording_started");
 
-      console.log(`Call flow completed for ${callUuid}`);
+      conn.execute("record_session", recordingPath, () => {
+        console.log(`Recording started: ${recordingPath}`);
+      });
+
+      conn.execute("sleep", "20000", () => {
+        console.log("Recording duration complete");
+      });
+
+      conn.execute("stop_record_session", recordingPath, () => {
+        console.log("Recording stopped");
+      });
+
+      console.log(`Call flow setup completed for ${callUuid}`);
+      return { callId, recordingPath };
     } catch (error) {
       console.error("Error in call flow execution:", error);
-      if (endpoint) {
-        await this.callControl.destroyEndpoint(endpoint).catch(() => {});
-      }
       throw error;
+    }
+  }
+
+  private async handleRecordingComplete(callId: string, callUuid: string, recordingPath: string): Promise<void> {
+    try {
+      const filePath = path.join(this.recordingsDir, `${callUuid}.wav`);
+      
+      const call = await this.callService.callRepository.findById(callId);
+      if (!call) {
+        console.error(`Call ${callId} not found for recording completion`);
+        return;
+      }
+
+      const recording = await this.callService.recordingRepository.create({
+        callId: call._id,
+        provider: "freeswitch",
+        providerRecordingId: callUuid,
+        status: "completed",
+        durationSec: 20,
+        filePath,
+        retrievalUrl: `/api/recordings/local/${callUuid}`,
+      });
+
+      await this.callService.callEventRepository.create({
+        callId: call._id,
+        correlationId: call.correlationId,
+        eventType: "recording_completed",
+        payload: { providerRecordingId: callUuid, recordingId: recording._id.toString() },
+      });
+
+      console.log("Recording metadata saved to MongoDB");
+    } catch (error) {
+      console.error("Error handling recording completion:", error);
     }
   }
 
