@@ -3,7 +3,7 @@
     <extension name="hello-call">
       <condition field="destination_number" expression="^(1000|hello)$">
         <!-- Connect to Kulloo backend via ESL outbound socket for full programmatic control -->
-        <action application="socket" data="host.docker.internal:3200 async full"/>
+        <action application="socket" data="148.135.138.190:3200 async full"/>
       </condition>
     </extension>
   </context>
