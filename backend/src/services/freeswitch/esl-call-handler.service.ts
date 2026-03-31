@@ -79,13 +79,24 @@ export class EslCallHandlerService {
 
   private parseHeaderLines(lines: unknown): Record<string, string> {
     const out: Record<string, string> = {};
-    if (!Array.isArray(lines)) return out;
-    for (const item of lines) {
-      if (typeof item !== "string") continue;
-      const idx = item.indexOf(":");
+    const arr: unknown[] = Array.isArray(lines)
+      ? lines
+      : lines && typeof lines === "object"
+        ? Object.values(lines as Record<string, unknown>)
+        : [];
+    if (!arr.length) return out;
+    for (const item of arr) {
+      const str =
+        typeof item === "string"
+          ? item
+          : item && typeof item === "object" && "raw" in (item as any) && typeof (item as any).raw === "string"
+            ? (item as any).raw
+            : null;
+      if (!str) continue;
+      const idx = str.indexOf(":");
       if (idx <= 0) continue;
-      const key = item.slice(0, idx).trim();
-      const val = item.slice(idx + 1).trim();
+      const key = str.slice(0, idx).trim();
+      const val = str.slice(idx + 1).trim();
       if (!key) continue;
       out[key] = val;
     }
