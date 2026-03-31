@@ -58,9 +58,6 @@ export class EslCallHandlerService {
     let callUuid: string | null = null;
     let callId: string | null = null;
     let recordingPath: string | null = null;
-    let fromRaw: string | null = null;
-    let toRaw: string | null = null;
-    let callerName: string | null = null;
 
     try {
       await new Promise<void>((resolve) => {
@@ -70,56 +67,65 @@ export class EslCallHandlerService {
         });
       });
 
-      conn.subscribe(["CHANNEL_DATA", "CHANNEL_ANSWER", "CHANNEL_HANGUP", "RECORD_STOP"], () => {
-        console.log("Subscribed to ESL events");
+      // CRITICAL: Send 'connect' first - required for outbound event socket
+      // FreeSWITCH waits for this command before allowing call control
+      const connectData = await new Promise<{
+        callUuid: string;
+        fromRaw: string | null;
+        toRaw: string | null;
+        callerName: string | null;
+      }>((resolve) => {
+        conn.api("connect", (evt) => {
+          const body = evt.getBody();
+          console.log("Received connect response, parsing channel data...");
+
+          // Parse headers from connect response
+          const getHeader = (name: string): string | null => {
+            const regex = new RegExp(`^${name}:\\s*(.*)$`, "m");
+            const match = body.match(regex);
+            return match ? match[1].trim() : null;
+          };
+
+          const uuid = getHeader("Channel-Call-UUID") || getHeader("Unique-ID") || randomUUID();
+          
+          const fromRaw =
+            getHeader("variable_effective_caller_id_number") ||
+            getHeader("Caller-Caller-ID-Number") ||
+            getHeader("variable_caller_id_number") ||
+            getHeader("variable_sip_from_user") ||
+            null;
+
+          const toRaw =
+            getHeader("variable_effective_callee_id_number") ||
+            getHeader("Caller-Destination-Number") ||
+            getHeader("variable_destination_number") ||
+            getHeader("variable_sip_to_user") ||
+            getHeader("variable_sip_req_user") ||
+            null;
+
+          const callerName =
+            getHeader("Caller-Caller-ID-Name") ||
+            getHeader("variable_caller_id_name") ||
+            getHeader("variable_effective_caller_id_name") ||
+            null;
+
+          console.log(`Parsed call - UUID: ${uuid}, From: ${fromRaw || "unknown"}, To: ${toRaw || "unknown"}`);
+          resolve({ callUuid: uuid, fromRaw, toRaw, callerName });
+        });
       });
 
-      // In ESL outbound mode, FreeSWITCH sends initial CHANNEL_DATA with all important headers.
-      conn.on("esl::event::CHANNEL_DATA::*", (evt: unknown) => {
-        const eslEvent = evt as { getHeader?: (name: string) => string | undefined };
-        const getHeader = (name: string): string | undefined => (eslEvent.getHeader ? eslEvent.getHeader(name) : undefined);
+      callUuid = connectData.callUuid;
 
-        const uuid =
-          getHeader("Channel-Call-UUID") ||
-          getHeader("Unique-ID") ||
-          getHeader("variable_uuid") ||
-          randomUUID();
+      // Subscribe to events after connect
+      conn.send("myevents");
+      console.log("Subscribed to channel events with myevents");
 
-        const effectiveCaller =
-          getHeader("variable_effective_caller_id_number") || getHeader("variable_caller_id_number") || getHeader("Caller-Caller-ID-Number");
-        const effectiveCallee =
-          getHeader("variable_effective_callee_id_number") || getHeader("variable_destination_number") || getHeader("Caller-Destination-Number");
+      const fromE164 = connectData.fromRaw ? toE164BestEffort(connectData.fromRaw) : undefined;
+      const toE164 = connectData.toRaw ? toE164BestEffort(connectData.toRaw) : undefined;
 
-        const sipFromUser = getHeader("variable_sip_from_user");
-        const sipToUser = getHeader("variable_sip_to_user");
+      console.log(`Processing call ${callUuid} from ${fromE164 || connectData.fromRaw || "unknown"} to ${toE164 || connectData.toRaw || "unknown"}`);
 
-        callUuid = uuid;
-        fromRaw = effectiveCaller || sipFromUser || null;
-        toRaw = effectiveCallee || sipToUser || null;
-        callerName = getHeader("Caller-Caller-ID-Name") || getHeader("variable_caller_id_name") || null;
-
-        const from = fromRaw ?? "unknown";
-        const to = toRaw ?? "unknown";
-
-        console.log(`Processing call ${callUuid} from ${from} to ${to}`);
-
-        this.executeCallFlow(conn, {
-          callUuid,
-          fromRaw,
-          toRaw,
-          fromE164: fromRaw ? toE164BestEffort(fromRaw) : undefined,
-          toE164: toRaw ? toE164BestEffort(toRaw) : undefined,
-          callerName: callerName ?? undefined,
-        })
-          .then((result) => {
-            callId = result.callId;
-            recordingPath = result.recordingPath;
-          })
-          .catch((err) => {
-            console.error("Error executing call flow:", err);
-          });
-      });
-
+      // Set up event listeners before executing call flow
       conn.on("esl::event::RECORD_STOP::*", (evt: unknown) => {
         const eslEvent = evt as { getHeader: (name: string) => string | undefined };
         const recordFile = eslEvent.getHeader ? eslEvent.getHeader("Record-File-Path") : undefined;
@@ -146,6 +152,19 @@ export class EslCallHandlerService {
       conn.on("esl::end", () => {
         console.log("ESL connection ended");
       });
+
+      // Execute call flow
+      const result = await this.executeCallFlow(conn, {
+        callUuid: connectData.callUuid,
+        fromRaw: connectData.fromRaw,
+        toRaw: connectData.toRaw,
+        fromE164,
+        toE164,
+        callerName: connectData.callerName ?? undefined,
+      });
+      
+      callId = result.callId;
+      recordingPath = result.recordingPath;
     } catch (error) {
       console.error("Error in ESL connection handler:", error);
     }
