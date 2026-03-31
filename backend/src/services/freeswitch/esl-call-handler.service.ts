@@ -470,7 +470,6 @@ export class EslCallHandlerService {
       if (outcome === "dtmf-1") {
         console.log("DTMF 1 received: stopping recording early");
         await this.callService.pushEvent(call, "dtmf", { digit: "1" });
-        await this.callService.setStatus(callId, "recording_stopping", { recordingStoppingAt: new Date() });
       } else {
         console.log("Recording duration complete");
       }
