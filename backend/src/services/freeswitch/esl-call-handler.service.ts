@@ -18,14 +18,31 @@ export class EslCallHandlerService {
   private host: string;
   private recordingsDir: string;
 
-  private async apiAsync(conn: Connection, command: string): Promise<string> {
+  private async sendRecvAsync(conn: Connection, command: string): Promise<string> {
     return await new Promise<string>((resolve, reject) => {
-      conn.api(command, (evt: any) => {
+      conn.sendRecv(command, (evt: any) => {
         const body = typeof evt?.getBody === "function" ? String(evt.getBody() ?? "") : "";
         if (body.startsWith("-ERR")) return reject(new Error(body));
         resolve(body);
       });
     });
+  }
+
+  private async getVar(conn: Connection, name: string): Promise<string | null> {
+    try {
+      const body = (await this.sendRecvAsync(conn, `getvar ${name}`)).trim();
+      // modesl/freeswitch commonly returns just the value, but be defensive.
+      if (!body || body === "_undef_" || body === "UNDEF") return null;
+      const idx = body.indexOf(":");
+      if (idx > 0) {
+        const maybeKey = body.slice(0, idx).trim();
+        const maybeVal = body.slice(idx + 1).trim();
+        if (maybeKey === name) return maybeVal || null;
+      }
+      return body;
+    } catch {
+      return null;
+    }
   }
 
   private pickFirstNonEmpty(...values: Array<string | null | undefined>): string | null {
@@ -246,44 +263,34 @@ export class EslCallHandlerService {
 
       // Reliable fallback: query FreeSWITCH for vars if caller/callee still missing.
       // This avoids "unknown" when upstream SIP headers aren't present in the initial connect headers.
+      // NOTE: in outbound event socket, prefer per-channel `getvar` over global `uuid_getvar`.
       let fromRaw = connectData.fromRaw;
       let toRaw = connectData.toRaw;
       let callerName = connectData.callerName;
 
-      if (callUuid && (!fromRaw || !toRaw)) {
-        try {
-          const readVar = async (varName: string): Promise<string | null> => {
-            const val = (await this.apiAsync(conn, `uuid_getvar ${callUuid} ${varName}`)).trim();
-            if (!val || val === "_undef_" || val === "UNDEF") return null;
-            return val;
-          };
+      if (!fromRaw) fromRaw = await this.getVar(conn, "effective_caller_id_number");
+      if (!fromRaw) fromRaw = await this.getVar(conn, "caller_id_number");
+      if (!fromRaw) fromRaw = await this.getVar(conn, "sip_from_user");
 
-          fromRaw =
-            fromRaw ??
-            (await readVar("effective_caller_id_number")) ??
-            (await readVar("caller_id_number")) ??
-            (await readVar("sip_from_user"));
+      if (!toRaw) toRaw = await this.getVar(conn, "destination_number");
+      if (!toRaw) toRaw = await this.getVar(conn, "effective_callee_id_number");
+      if (!toRaw) toRaw = await this.getVar(conn, "sip_to_user");
+      if (!toRaw) toRaw = await this.getVar(conn, "sip_req_user");
 
-          toRaw =
-            toRaw ??
-            (await readVar("destination_number")) ??
-            (await readVar("effective_callee_id_number")) ??
-            (await readVar("sip_to_user")) ??
-            (await readVar("sip_req_user"));
+      if (!callerName) callerName = await this.getVar(conn, "effective_caller_id_name");
+      if (!callerName) callerName = await this.getVar(conn, "caller_id_name");
 
-          callerName =
-            callerName ??
-            (await readVar("effective_caller_id_name")) ??
-            (await readVar("caller_id_name"));
+      // If our parsed UUID was random/incorrect, fetch the real per-channel UUID.
+      const uuidFromVar = await this.getVar(conn, "uuid");
+      if (uuidFromVar && uuidFromVar !== callUuid) {
+        console.log(`UUID corrected via getvar uuid: ${callUuid} -> ${uuidFromVar}`);
+        callUuid = uuidFromVar;
+      }
 
-          if (fromRaw || toRaw || callerName) {
-            console.log(
-              `Parsed(uuid_getvar) - UUID: ${callUuid}, From: ${fromRaw || "unknown"}, To: ${toRaw || "unknown"}, Name: ${callerName || "N/A"}`,
-            );
-          }
-        } catch (err) {
-          console.error("uuid_getvar fallback failed:", err);
-        }
+      if (fromRaw || toRaw || callerName) {
+        console.log(
+          `Parsed(getvar) - UUID: ${callUuid}, From: ${fromRaw || "unknown"}, To: ${toRaw || "unknown"}, Name: ${callerName || "N/A"}`,
+        );
       }
 
       const fromE164 = connectData.fromRaw ? toE164BestEffort(connectData.fromRaw) : undefined;
