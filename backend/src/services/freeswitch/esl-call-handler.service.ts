@@ -18,6 +18,36 @@ export class EslCallHandlerService {
   private host: string;
   private recordingsDir: string;
 
+  private async execAndWait(conn: Connection, app: string, arg = ""): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      const onComplete = (evt: unknown) => {
+        try {
+          const eslEvent = evt as { getHeader?: (name: string) => string | undefined };
+          const getHeader = (name: string): string | undefined => (eslEvent.getHeader ? eslEvent.getHeader(name) : undefined);
+          const application = getHeader("Application");
+          const applicationData = getHeader("Application-Data");
+          if (application !== app) return;
+          if ((arg ?? "") && (applicationData ?? "") !== (arg ?? "")) return;
+          conn.off("esl::event::CHANNEL_EXECUTE_COMPLETE::*", onComplete);
+          resolve();
+        } catch (err) {
+          conn.off("esl::event::CHANNEL_EXECUTE_COMPLETE::*", onComplete);
+          reject(err);
+        }
+      };
+
+      conn.on("esl::event::CHANNEL_EXECUTE_COMPLETE::*", onComplete);
+
+      conn.execute(app, arg, (reply: any) => {
+        const body = typeof reply?.getBody === "function" ? reply.getBody() : "";
+        if (typeof body === "string" && body.startsWith("-ERR")) {
+          conn.off("esl::event::CHANNEL_EXECUTE_COMPLETE::*", onComplete);
+          reject(new Error(body));
+        }
+      });
+    });
+  }
+
   constructor(options: EslCallHandlerOptions) {
     this.port = options.port;
     this.host = options.host || "0.0.0.0";
@@ -73,12 +103,13 @@ export class EslCallHandlerService {
           // In outbound mode, FreeSWITCH sends channel data immediately
           // Access it via getInfo() which returns the initial headers
           const info = (conn as any).getInfo();
+          const headers = (info && typeof info === "object" && "headers" in info) ? (info.headers as Record<string, unknown>) : (info as Record<string, unknown> | null);
           console.log("Channel info received from FreeSWITCH");
-          console.log("Available headers:", Object.keys(info || {}).slice(0, 20).join(", "));
+          console.log("Available headers:", Object.keys(headers || {}).slice(0, 20).join(", "));
 
           // Parse headers from initial channel data
           const getHeader = (name: string): string | null => {
-            return info && info[name] ? String(info[name]) : null;
+            return headers && headers[name] != null ? String(headers[name]) : null;
           };
 
           const uuid = 
@@ -217,20 +248,17 @@ export class EslCallHandlerService {
         callUuid: input.callUuid,
       });
 
-      conn.execute("answer", "", () => {
-        console.log("Call answered");
-      });
+      await this.execAndWait(conn, "answer", "");
+      console.log("Call answered");
 
       await this.callService.setStatus(callId, "answered", { answeredAt: new Date() });
       await this.callService.pushEvent(call, "answered");
 
-      conn.execute("sleep", "500", () => {
-        console.log("Sleep 500ms complete");
-      });
+      await this.execAndWait(conn, "sleep", "500");
+      console.log("Sleep 500ms complete");
 
-      conn.execute("playback", "tone_stream://%(1000,0,440)", () => {
-        console.log("Playback complete");
-      });
+      await this.execAndWait(conn, "playback", "tone_stream://%(1000,0,440)");
+      console.log("Playback complete");
 
       await this.callService.setStatus(callId, "played", { playedAt: new Date() });
       await this.callService.pushEvent(call, "played", { message: "Tone played" });
@@ -240,17 +268,14 @@ export class EslCallHandlerService {
       await this.callService.setStatus(callId, "recording_started", { recordingStartedAt: new Date() });
       await this.callService.pushEvent(call, "recording_started");
 
-      conn.execute("record_session", recordingPath, () => {
-        console.log(`Recording started: ${recordingPath}`);
-      });
+      conn.execute("record_session", recordingPath, () => {});
+      console.log(`Recording started: ${recordingPath}`);
 
-      conn.execute("sleep", "20000", () => {
-        console.log("Recording duration complete");
-      });
+      await this.execAndWait(conn, "sleep", "20000");
+      console.log("Recording duration complete");
 
-      conn.execute("stop_record_session", recordingPath, () => {
-        console.log("Recording stopped");
-      });
+      await this.execAndWait(conn, "stop_record_session", recordingPath);
+      console.log("Recording stopped");
 
       console.log(`Call flow setup completed for ${input.callUuid}`);
       return { callId, recordingPath };
