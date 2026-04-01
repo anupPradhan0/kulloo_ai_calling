@@ -595,6 +595,28 @@ export class EslCallHandlerService {
       await this.callService.setStatus(callId, "recording_started", { recordingStartedAt: new Date() });
       await this.callService.pushEvent(call, "recording_started");
 
+      // Create/Upsert a recording row immediately so every WAV has a DB record,
+      // even if the backend restarts before RECORD_STOP is processed.
+      const providerRecordingId = input.callUuid;
+      const retrievalUrl = `/api/recordings/local/${providerRecordingId}`;
+      const existingRecording = await this.callService.recordingRepository.findByProviderRecordingId(providerRecordingId);
+      if (existingRecording) {
+        await this.callService.recordingRepository.updateById(existingRecording._id.toString(), {
+          status: "pending",
+          filePath: recordingPath,
+          retrievalUrl,
+        });
+      } else {
+        await this.callService.recordingRepository.create({
+          callId: call._id,
+          provider: "freeswitch",
+          providerRecordingId,
+          status: "pending",
+          filePath: recordingPath,
+          retrievalUrl,
+        });
+      }
+
       conn.execute("record_session", recordingPath, () => {});
       console.log(`Recording started: ${recordingPath}`);
 
