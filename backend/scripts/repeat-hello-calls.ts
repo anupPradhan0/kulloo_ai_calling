@@ -1,3 +1,5 @@
+import axios from "axios";
+
 type Mode = "inbound-sip" | "outbound-sip" | "outbound-pstn";
 
 interface CliConfig {
@@ -42,28 +44,27 @@ async function run(): Promise<void> {
         : "sip-local";
       const endpoint = isInbound ? "/api/calls/inbound/hello" : "/api/calls/outbound/hello";
 
-      const response = await fetch(`${config.baseUrl}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(isInbound ? {} : { "Idempotency-Key": `hello-${Date.now()}-${i}` }),
-        },
-        body: JSON.stringify({
+      const { data } = await axios.post<{
+        data?: { call?: { _id?: string; status?: string }; recordings?: unknown[] };
+      }>(
+        `${config.baseUrl}${endpoint}`,
+        {
           from: config.from,
           to: config.to,
           provider,
           recordingEnabled: true,
-        }),
-      });
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(isInbound ? {} : { "Idempotency-Key": `hello-${Date.now()}-${i}` }),
+          },
+        },
+      );
 
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`HTTP ${response.status}: ${body}`);
+      if (!data || typeof data !== "object") {
+        throw new Error("Empty response body");
       }
-
-      const data = (await response.json()) as {
-        data?: { call?: { _id?: string; status?: string }; recordings?: unknown[] };
-      };
 
       successCount += 1;
       const callId = data?.data?.call?._id ?? "unknown";
