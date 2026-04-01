@@ -3,6 +3,7 @@ import { CallService } from "../../modules/calls/services/call.service";
 import { randomUUID } from "crypto";
 import path from "path";
 import { toE164BestEffort } from "../../utils/phone-normalize";
+import fs from "node:fs/promises";
 
 export interface EslCallHandlerOptions {
   port: number;
@@ -678,7 +679,51 @@ export class EslCallHandlerService {
         return;
       }
 
+      // Recording integrity: wait briefly for file flush and ensure non-trivial size.
+      // WAV header is ~44 bytes; treat anything <= 44 bytes as invalid/empty.
+      let st: { size: number } | null = null;
+      for (let attempt = 1; attempt <= 10; attempt += 1) {
+        try {
+          const stat = await fs.stat(filePath);
+          if (stat.size > 44) {
+            st = { size: stat.size };
+            break;
+          }
+        } catch {
+          // file not there yet
+        }
+        await new Promise((r) => setTimeout(r, 200 * attempt));
+      }
+
       const existing = await this.callService.recordingRepository.findByProviderRecordingId(callUuid);
+
+      if (!st) {
+        // If the file never materialized (early hangup/crash), mark recording failed but keep the row.
+        if (existing) {
+          await this.callService.recordingRepository.updateById(existing._id.toString(), {
+            status: "failed",
+            filePath,
+            retrievalUrl: `/api/recordings/local/${callUuid}`,
+          });
+        } else {
+          await this.callService.recordingRepository.create({
+            callId: call._id,
+            provider: "freeswitch",
+            providerRecordingId: callUuid,
+            status: "failed",
+            filePath,
+            retrievalUrl: `/api/recordings/local/${callUuid}`,
+          });
+        }
+        await this.callService.callEventRepository.create({
+          callId: call._id,
+          correlationId: call.correlationId,
+          eventType: "recording_failed",
+          payload: { providerRecordingId: callUuid, reason: "file_missing_or_empty" },
+        });
+        console.error(`Recording file missing/empty after retries: ${filePath}`);
+        return;
+      }
 
       const patch = {
         status: "completed" as const,
