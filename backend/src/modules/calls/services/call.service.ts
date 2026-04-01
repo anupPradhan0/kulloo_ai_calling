@@ -84,11 +84,16 @@ export class CallService {
 
     const correlationId = randomUUID();
     const now = new Date();
+    // Plivo+FreeSWITCH outbound: we only get the real FS channel UUID when ESL connects.
+    // Mongo unique index { provider, providerCallId } treats multiple nulls as duplicates — use a stable placeholder until ESL patches it.
+    const outboundId = new Types.ObjectId();
     const call = await this.callRepository.create({
+      _id: outboundId,
       direction: "outbound",
       // Outbound PSTN via Plivo uses FreeSWITCH as the media/control plane.
       provider: payload.provider === "plivo" ? "freeswitch" : payload.provider,
       upstreamProvider: payload.provider === "plivo" ? "plivo" : undefined,
+      ...(payload.provider === "plivo" ? { providerCallId: `pending-${outboundId.toString()}` } : {}),
       from: payload.from,
       to: payload.to,
       status: "initiated",

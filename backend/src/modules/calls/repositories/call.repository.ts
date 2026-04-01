@@ -2,7 +2,9 @@ import { Types } from "mongoose";
 import { CallDocument, CallModel, CallProvider, CallStatus } from "../models/call.model";
 
 export class CallRepository {
-  async create(payload: Omit<CallDocument, "_id" | "createdAt" | "updatedAt">): Promise<CallDocument> {
+  async create(
+    payload: Omit<CallDocument, "_id" | "createdAt" | "updatedAt"> & { _id?: Types.ObjectId },
+  ): Promise<CallDocument> {
     return CallModel.create(payload);
   }
 
