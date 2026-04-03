@@ -120,15 +120,28 @@ export class CallService {
           upstreamProvider: "plivo",
           upstreamCallId: result.providerCallId,
         });
-      } else {
-        await this.callRepository.setProviderCallId(call._id.toString(), result.providerCallId);
+        // Plivo only dials + bridges to FreeSWITCH; ESL owns answer/play/record/hangup/completed.
+        // Do not simulate played/recording/hangup here — it races ESL and corrupts timestamps/status.
+        await this.setStatus(call._id.toString(), this.mapConnectedStatus(payload.provider), {
+          connectedAt: result.connectedAt,
+        });
+        await this.pushEvent(call, "connected", {
+          upstreamCallId: result.providerCallId,
+          note: "PSTN leg started; media handled by FreeSWITCH/ESL",
+        });
+        const finalCall = await this.callRepository.findById(call._id.toString());
+        if (!finalCall) {
+          throw new ApiError("Call not found after Plivo dial", 500);
+        }
+        return { call: finalCall, recordings: [] };
       }
+
+      await this.callRepository.setProviderCallId(call._id.toString(), result.providerCallId);
       await this.setStatus(call._id.toString(), this.mapConnectedStatus(payload.provider), {
         connectedAt: result.connectedAt,
       });
       await this.pushEvent(call, "connected", {
-        providerCallId: payload.provider === "plivo" ? undefined : result.providerCallId,
-        upstreamCallId: payload.provider === "plivo" ? result.providerCallId : undefined,
+        providerCallId: result.providerCallId,
       });
 
       await this.setStatus(call._id.toString(), "played", { playedAt: result.playedAt });

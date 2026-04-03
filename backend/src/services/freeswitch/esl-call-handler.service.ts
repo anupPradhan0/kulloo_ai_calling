@@ -554,7 +554,7 @@ export class EslCallHandlerService {
         callerName: callerName ?? undefined,
         kullooCallId,
       });
-      
+
       callId = result.callId;
       recordingPath = result.recordingPath;
     } catch (error) {
@@ -596,17 +596,18 @@ export class EslCallHandlerService {
       if (kullooCallId && /^[a-fA-F0-9]{24}$/.test(kullooCallId)) {
         const existing = await this.callService.callRepository.findById(kullooCallId);
         if (existing) {
+          // Keep API `from` / `to` (dialed PSTN); FreeSWITCH often reports extension (e.g. 1000) as destination_number.
           call = await this.callService.callRepository.updateById(existing._id.toString(), {
             provider: "freeswitch",
             providerCallId: input.callUuid,
             direction: "outbound",
-            from,
-            to,
-            fromRaw: input.fromRaw ?? undefined,
-            toRaw: input.toRaw ?? undefined,
-            fromE164: input.fromE164,
-            toE164: input.toE164,
-            callerName: input.callerName,
+            from: existing.from,
+            to: existing.to,
+            fromRaw: input.fromRaw ?? existing.fromRaw,
+            toRaw: input.toRaw ?? existing.toRaw,
+            fromE164: input.fromE164 ?? existing.fromE164,
+            toE164: existing.toE164 ?? input.toE164,
+            callerName: input.callerName ?? existing.callerName,
           });
         }
       }
