@@ -22,7 +22,7 @@ app.use((req, res, next) => {
   const incoming = req.header("X-Correlation-Id")?.trim();
   const correlationId = incoming && incoming.length > 0 ? incoming : randomUUID();
   res.setHeader("X-Correlation-Id", correlationId);
-  (req as any).correlationId = correlationId;
+  req.correlationId = correlationId;
   next();
 });
 

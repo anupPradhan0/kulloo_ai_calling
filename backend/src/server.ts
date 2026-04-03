@@ -2,6 +2,7 @@ import { app } from "./app";
 import { connectDatabase } from "./config/database";
 import { env } from "./config/env";
 import { AddressInfo } from "node:net";
+import type { EslCallHandlerService } from "./services/freeswitch/esl-call-handler.service";
 import { OrphanCallsRecoveryService } from "./services/recovery/orphan-calls-recovery.service";
 import { RecordingsSyncService } from "./services/recovery/recordings-sync.service";
 
@@ -57,7 +58,7 @@ async function bootstrap(): Promise<void> {
   // No need to connect TO FreeSWITCH first in outbound mode
   const { EslCallHandlerService: EslHandler } = await import("./services/freeswitch/esl-call-handler.service");
   
-  const eslServer = new EslHandler({
+  const eslServer: EslCallHandlerService = new EslHandler({
     port: eslOutboundPort,
     host: "0.0.0.0",
     recordingsDir,
@@ -68,7 +69,7 @@ async function bootstrap(): Promise<void> {
   const recovery = new OrphanCallsRecoveryService({
     graceMs: orphanGraceMs,
     sweepIntervalMs: orphanSweepIntervalMs,
-    getActiveProviderCallIds: () => (eslServer as any).getActiveProviderCallIds?.() ?? new Set<string>(),
+    getActiveProviderCallIds: () => eslServer.getActiveProviderCallIds(),
   });
   await recovery.runOnce("startup");
   recovery.start();

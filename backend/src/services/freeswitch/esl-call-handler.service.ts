@@ -1,5 +1,6 @@
 import { Server as EslServer, Connection } from "modesl";
 import { CallService } from "../../modules/calls/services/call.service";
+import type { CallDocument } from "../../modules/calls/models/call.model";
 import { randomUUID } from "crypto";
 import path from "path";
 import { toE164BestEffort } from "../../utils/phone-normalize";
@@ -172,6 +173,14 @@ export class EslCallHandlerService {
       out[key] = val;
     }
     return out;
+  }
+
+  /** Prefer embedded `headers` on ESL events; otherwise parse the event payload. */
+  private eslEventHeaderSource(evt: unknown): unknown {
+    if (evt !== null && typeof evt === "object" && "headers" in evt) {
+      return (evt as { headers: unknown }).headers;
+    }
+    return evt;
   }
 
   private extractKullooCallId(headersObj: Record<string, unknown>): string | null {
@@ -436,7 +445,7 @@ export class EslCallHandlerService {
 
             const parsed = this.parseChannelHeaders(getHeader);
             // If Plivo passed a SIP header, FreeSWITCH usually exposes it as `variable_sip_h_X-PH-KullooCallId`.
-            const headersObj = this.parseHeaderLines((evt as any)?.headers ?? evt);
+            const headersObj = this.parseHeaderLines(this.eslEventHeaderSource(evt));
             const kullooCallId = this.extractKullooCallId(headersObj);
             console.log(
               `Parsed(CHANNEL_DATA) - UUID: ${parsed.callUuid}, From: ${parsed.fromRaw || "unknown"}, To: ${parsed.toRaw || "unknown"}, Name: ${parsed.callerName || "N/A"}`,
@@ -562,14 +571,14 @@ export class EslCallHandlerService {
       const correlationId = randomUUID();
 
       // If this ESL session corresponds to an API-initiated outbound call, attach to that call record.
-      let call: any = null;
+      let call: CallDocument | null = null;
       let created = false;
       const kullooCallId = input.kullooCallId && typeof input.kullooCallId === "string" ? input.kullooCallId : null;
       if (kullooCallId && /^[a-fA-F0-9]{24}$/.test(kullooCallId)) {
         const existing = await this.callService.callRepository.findById(kullooCallId);
         if (existing) {
           // Keep API `from` / `to` (dialed PSTN); FreeSWITCH often reports extension (e.g. 1000) as destination_number.
-          call = await this.callService.callRepository.updateById(existing._id.toString(), {
+          const updated = await this.callService.callRepository.updateById(existing._id.toString(), {
             provider: "freeswitch",
             providerCallId: input.callUuid,
             direction: "outbound",
@@ -581,6 +590,7 @@ export class EslCallHandlerService {
             toE164: existing.toE164 ?? input.toE164,
             callerName: input.callerName ?? existing.callerName,
           });
+          call = updated ?? existing;
         }
       }
 
