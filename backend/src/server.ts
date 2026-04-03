@@ -5,6 +5,7 @@ import { AddressInfo } from "node:net";
 import type { EslCallHandlerService } from "./services/freeswitch/esl-call-handler.service";
 import { OrphanCallsRecoveryService } from "./services/recovery/orphan-calls-recovery.service";
 import { RecordingsSyncService } from "./services/recovery/recordings-sync.service";
+import { logger } from "./utils/logger";
 
 function listenWithPortFallback(startPort: number, maxAttempts = 10): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -16,10 +17,7 @@ function listenWithPortFallback(startPort: number, maxAttempts = 10): Promise<vo
         const activePort = address.port;
         const baseUrl = `http://localhost:${activePort}`;
 
-        // eslint-disable-next-line no-console
-        console.log(`Server running on port ${activePort}`);
-        // eslint-disable-next-line no-console
-        console.log(`Server URL: ${baseUrl}`);
+        logger.info("http_server_listening", { port: activePort, baseUrl });
         resolve();
       });
 
@@ -27,8 +25,7 @@ function listenWithPortFallback(startPort: number, maxAttempts = 10): Promise<vo
         server.close();
 
         if (error.code === "EADDRINUSE" && attemptsLeft > 1) {
-          // eslint-disable-next-line no-console
-          console.warn(`Port ${port} is in use, trying ${port + 1}...`);
+          logger.warn("http_server_port_in_use", { port, trying: port + 1 });
           tryListen(port + 1, attemptsLeft - 1);
           return;
         }
@@ -52,7 +49,7 @@ async function bootstrap(): Promise<void> {
   const recordingsSyncIntervalMs = Number(process.env.RECORDINGS_SYNC_INTERVAL_MS ?? 60000);
   const publicBaseUrl = process.env.PUBLIC_BASE_URL?.trim();
 
-  console.log(`Starting ESL outbound server on port ${eslOutboundPort}`);
+  logger.info("bootstrap_starting_esl_server", { eslOutboundPort });
 
   // ESL outbound server - FreeSWITCH connects TO this
   // No need to connect TO FreeSWITCH first in outbound mode
@@ -85,14 +82,15 @@ async function bootstrap(): Promise<void> {
   recordingsSync.start();
 
   await eslServer.listen();
-  console.log(`ESL outbound server listening on port ${eslOutboundPort}`);
-  console.log("FreeSWITCH will connect to this server when calls arrive");
+  logger.info("bootstrap_esl_ready", {
+    eslOutboundPort,
+    note: "FreeSWITCH connects inbound to this port",
+  });
 
   await listenWithPortFallback(env.port);
 }
 
 bootstrap().catch((error: unknown) => {
-  // eslint-disable-next-line no-console
-  console.error("Failed to start server", error);
+  logger.error("bootstrap_failed", { err: error });
   process.exit(1);
 });

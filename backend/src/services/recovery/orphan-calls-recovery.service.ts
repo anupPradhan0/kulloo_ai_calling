@@ -1,4 +1,5 @@
 import { CallModel } from "../../modules/calls/models/call.model";
+import { logger } from "../../utils/logger";
 
 export interface OrphanRecoveryOptions {
   graceMs: number;
@@ -86,9 +87,8 @@ export class OrphanCallsRecoveryService {
     if (this.timer) return;
     if (this.opts.sweepIntervalMs <= 0) return;
     this.timer = setInterval(() => {
-      this.runOnce("interval").catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error("Orphan call recovery sweep failed:", err);
+      this.runOnce("interval").catch((err: unknown) => {
+        logger.error("orphan_call_recovery_sweep_failed", { err });
       });
     }, this.opts.sweepIntervalMs);
   }

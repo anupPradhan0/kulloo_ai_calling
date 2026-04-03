@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { apiRouter } from "./routes";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware";
 import { randomUUID } from "node:crypto";
+import { logger } from "./utils/logger";
 
 export const app = express();
 
@@ -13,7 +14,17 @@ app.set("etag", false);
 
 app.use(cors());
 app.use(helmet());
-app.use(morgan("dev"));
+
+morgan.token("correlation-id", (req: express.Request) => req.correlationId ?? "-");
+if (process.env.NODE_ENV === "production") {
+  app.use(
+    morgan(
+      ':correlation-id :remote-addr :method :url HTTP/:http-version :status :res[content-length] - :response-time ms',
+    ),
+  );
+} else {
+  app.use(morgan(":correlation-id :method :url :status :response-time ms"));
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -54,6 +65,11 @@ function sendPlivoAnswerXml(req: express.Request, res: express.Response): void {
   const freeswitchSipUri = process.env.FREESWITCH_SIP_URI?.trim();
 
   if (!freeswitchSipUri) {
+    logger.error("plivo_answer_missing_freeswitch_sip_uri", {
+      correlationId: req.correlationId,
+      plivoCallUuid: callUuid,
+      kullooCallId: kullooCallId ?? null,
+    });
     res.type("application/xml").status(200).send(
       `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -69,6 +85,12 @@ function sendPlivoAnswerXml(req: express.Request, res: express.Response): void {
     typeof kullooCallId === "string" && /^[a-fA-F0-9]{24}$/.test(kullooCallId.trim())
       ? ` sipHeaders="KullooCallId=${kullooCallId.trim()}"`
       : "";
+  logger.info("plivo_answer_bridge_to_freeswitch", {
+    correlationId: req.correlationId,
+    plivoCallUuid: callUuid ?? null,
+    kullooCallId: typeof kullooCallId === "string" ? kullooCallId : null,
+    hasSipHeaderReplay: Boolean(sipHeadersAttr),
+  });
   res.type("application/xml").status(200).send(
     `<?xml version="1.0" encoding="UTF-8"?>
 <Response>

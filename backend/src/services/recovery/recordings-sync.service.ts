@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { CallModel } from "../../modules/calls/models/call.model";
 import { RecordingModel } from "../../modules/calls/models/recording.model";
+import { logger } from "../../utils/logger";
 
 export interface RecordingsSyncOptions {
   recordingsDir: string;
@@ -81,7 +82,7 @@ export class RecordingsSyncService {
     this.timer = setInterval(() => {
       this.runOnce("interval").catch((err) => {
         // eslint-disable-next-line no-console
-        console.error("Recordings sync sweep failed:", err);
+        logger.error("recordings_sync_sweep_failed", { err });
       });
     }, this.opts.sweepIntervalMs);
   }

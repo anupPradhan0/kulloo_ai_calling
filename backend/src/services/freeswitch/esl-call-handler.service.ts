@@ -6,6 +6,7 @@ import path from "path";
 import { toE164BestEffort } from "../../utils/phone-normalize";
 import fs from "node:fs/promises";
 import { metrics } from "../observability/metrics.service";
+import { logger, serializeError } from "../../utils/logger";
 
 export interface EslCallHandlerOptions {
   port: number;
@@ -29,15 +30,19 @@ export class EslCallHandlerService {
     message: string,
     extra?: unknown,
   ): void {
-    const prefix = ctx
-      ? `[corr=${ctx.correlationId ?? "-"} callId=${ctx.callId ?? "-"} uuid=${ctx.uuid ?? "-"}]`
-      : "";
+    const meta: Record<string, unknown> = {
+      component: "esl",
+      ...(ctx?.correlationId ? { correlationId: ctx.correlationId } : {}),
+      ...(ctx?.callId ? { callId: ctx.callId } : {}),
+      ...(ctx?.uuid ? { channelUuid: ctx.uuid } : {}),
+    };
+    if (extra !== undefined && extra !== "") {
+      meta.extra = extra instanceof Error ? serializeError(extra) : extra;
+    }
     if (level === "error") {
-      // eslint-disable-next-line no-console
-      console.error(prefix, message, extra ?? "");
+      logger.error(message, meta);
     } else {
-      // eslint-disable-next-line no-console
-      console.log(prefix, message, extra ?? "");
+      logger.info(message, meta);
     }
   }
 
@@ -358,23 +363,23 @@ export class EslCallHandlerService {
     return new Promise((resolve, reject) => {
       try {
         this.server = new EslServer({ port: this.port, host: this.host }, () => {
-          console.log(`ESL outbound server listening on ${this.host}:${this.port}`);
+          logger.info("esl_server_listening", { component: "esl", host: this.host, port: this.port });
           resolve();
         });
 
         this.server.on("connection::open", (conn: Connection) => {
-          console.log("New ESL connection from FreeSWITCH");
-          this.handleConnection(conn).catch((err) => {
-            console.error("Error handling ESL connection:", err);
+          logger.info("esl_connection_open", { component: "esl" });
+          this.handleConnection(conn).catch((err: unknown) => {
+            logger.error("esl_connection_handler_failed", { component: "esl", err });
           });
         });
 
-        this.server.on("connection::close", (conn: Connection) => {
-          console.log("ESL connection closed");
+        this.server.on("connection::close", (_conn: Connection) => {
+          logger.debug("esl_connection_socket_closed", { component: "esl" });
         });
 
         this.server.on("error", (err: Error) => {
-          console.error("ESL server error:", err);
+          logger.error("esl_server_error", { component: "esl", err });
           reject(err);
         });
       } catch (error) {
@@ -396,7 +401,7 @@ export class EslCallHandlerService {
         kullooCallId: string | null;
       }>((resolve) => {
         conn.on("esl::ready", () => {
-          console.log("ESL connection ready");
+          logger.info("esl_channel_ready", { component: "esl" });
           
           // In outbound mode, FreeSWITCH sends channel data immediately
           // Access it via getInfo() which returns the initial headers
@@ -408,8 +413,10 @@ export class EslCallHandlerService {
             rawHeaders && typeof rawHeaders === "object" && !Array.isArray(rawHeaders)
               ? (rawHeaders as Record<string, unknown>)
               : this.parseHeaderLines(rawHeaders);
-          console.log("Channel info received from FreeSWITCH");
-          console.log("Available headers:", Object.keys(headersObj || {}).slice(0, 20).join(", "));
+          logger.debug("esl_channel_info_headers", {
+            component: "esl",
+            headerKeys: Object.keys(headersObj || {}).slice(0, 30),
+          });
 
           // Parse headers from initial channel data
           const getHeader = (name: string): string | null => {
@@ -418,16 +425,21 @@ export class EslCallHandlerService {
 
           const parsed = this.parseChannelHeaders(getHeader);
           const kullooCallId = this.extractKullooCallId(headersObj);
-          console.log(
-            `Parsed(call-info) - UUID: ${parsed.callUuid}, From: ${parsed.fromRaw || "unknown"}, To: ${parsed.toRaw || "unknown"}, Name: ${parsed.callerName || "N/A"}`,
-          );
+          logger.info("esl_parsed_call_info", {
+            component: "esl",
+            channelUuid: parsed.callUuid,
+            fromRaw: parsed.fromRaw,
+            toRaw: parsed.toRaw,
+            callerName: parsed.callerName,
+            kullooCallId,
+          });
           resolve({ ...parsed, kullooCallId });
         });
       });
 
       // Subscribe to channel events as early as possible
       conn.send("myevents");
-      console.log("Subscribed to channel events with myevents");
+      logger.debug("esl_subscribed_myevents", { component: "esl" });
 
       // Prefer CHANNEL_DATA (has full variables) if it arrives quickly.
       const connectData = await Promise.race([
@@ -447,9 +459,14 @@ export class EslCallHandlerService {
             // If Plivo passed a SIP header, FreeSWITCH usually exposes it as `variable_sip_h_X-PH-KullooCallId`.
             const headersObj = this.parseHeaderLines(this.eslEventHeaderSource(evt));
             const kullooCallId = this.extractKullooCallId(headersObj);
-            console.log(
-              `Parsed(CHANNEL_DATA) - UUID: ${parsed.callUuid}, From: ${parsed.fromRaw || "unknown"}, To: ${parsed.toRaw || "unknown"}, Name: ${parsed.callerName || "N/A"}`,
-            );
+            logger.info("esl_parsed_channel_data", {
+              component: "esl",
+              channelUuid: parsed.callUuid,
+              fromRaw: parsed.fromRaw,
+              toRaw: parsed.toRaw,
+              callerName: parsed.callerName,
+              kullooCallId,
+            });
 
             conn.off("esl::event::CHANNEL_DATA::*", onChannelData);
             resolve({ ...parsed, kullooCallId });
@@ -496,7 +513,11 @@ export class EslCallHandlerService {
       // If our parsed UUID was random/incorrect, fetch the real per-channel UUID.
       const uuidFromVar = await this.getVar(conn, "uuid");
       if (uuidFromVar && uuidFromVar !== callUuid) {
-        console.log(`UUID corrected via getvar uuid: ${callUuid} -> ${uuidFromVar}`);
+        logger.info("esl_uuid_corrected", {
+          component: "esl",
+          previousUuid: callUuid,
+          channelUuid: uuidFromVar,
+        });
         callUuid = uuidFromVar;
       }
 
@@ -505,9 +526,14 @@ export class EslCallHandlerService {
       }
 
       if (fromRaw || toRaw || callerName) {
-        console.log(
-          `Parsed(getvar) - UUID: ${callUuid}, From: ${fromRaw || "unknown"}, To: ${toRaw || "unknown"}, Name: ${callerName || "N/A"}`,
-        );
+        logger.debug("esl_parsed_getvar", {
+          component: "esl",
+          channelUuid: callUuid,
+          fromRaw,
+          toRaw,
+          callerName,
+          kullooCallId,
+        });
       }
 
       const fromE164 = connectData.fromRaw ? toE164BestEffort(connectData.fromRaw) : undefined;
@@ -516,12 +542,16 @@ export class EslCallHandlerService {
       const finalFromE164 = fromRaw ? toE164BestEffort(fromRaw) : undefined;
       const finalToE164 = toRaw ? toE164BestEffort(toRaw) : undefined;
 
-      console.log(
-        `Processing call ${callUuid} from ${finalFromE164 || fromRaw || "unknown"} to ${finalToE164 || toRaw || "unknown"}`,
-      );
+      logger.info("esl_processing_call", {
+        component: "esl",
+        channelUuid: callUuid,
+        fromE164: finalFromE164 ?? fromRaw,
+        toE164: finalToE164 ?? toRaw,
+        kullooCallId,
+      });
 
       conn.on("esl::end", () => {
-        console.log("ESL connection ended");
+        logger.info("esl_connection_end", { component: "esl", channelUuid: callUuid });
         if (callUuid) {
           this.activeProviderCallIds.delete(callUuid);
         }
@@ -539,7 +569,7 @@ export class EslCallHandlerService {
         kullooCallId,
       });
     } catch (error) {
-      console.error("Error in ESL connection handler:", error);
+      logger.error("esl_connection_handler_error", { component: "esl", channelUuid: callUuid, err: error });
       if (callUuid) {
         this.activeProviderCallIds.delete(callUuid);
       }
@@ -722,7 +752,7 @@ export class EslCallHandlerService {
       detachDtmfLogger();
       // Hard hangup to enforce max duration; this matches the desired outbound behavior.
       await this.execAndWait(conn, "hangup", "", EslCallHandlerService.HANGUP_TIMEOUT_MS);
-      console.log("Call hung up");
+      this.log(ctx, "info", "Call hung up (ESL)");
 
       const hangupAt = new Date();
       await this.callService.setStatus(callId, "hangup", { hangupAt });
@@ -863,7 +893,7 @@ export class EslCallHandlerService {
 
   close(): void {
     if (this.server) {
-      console.log("Closing ESL outbound server");
+      logger.info("esl_server_closing", { component: "esl" });
       this.server.close();
       this.server = null;
     }
