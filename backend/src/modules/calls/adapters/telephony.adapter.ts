@@ -19,6 +19,7 @@ export interface OutboundExecutionInput {
   to: string;
   recordingEnabled: boolean;
   message: string;
+  /** Stable id = `Call._id` hex; sent to Plivo/FS as SIP header `KullooCallId` and query `kullooCallId`. */
   kullooCallId?: string;
 }
 

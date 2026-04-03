@@ -15,6 +15,11 @@ export class CallRepository {
     return CallModel.findById(id);
   }
 
+  /** Stable telephony id: Mongo `Call._id` hex (Jambonz `call_sid` equivalent), carried on SIP as `KullooCallId`. */
+  async findByStableCallId(stableCallId: string): Promise<CallDocument | null> {
+    return this.findById(stableCallId);
+  }
+
   async findByIdempotencyKey(idempotencyKey: string): Promise<CallDocument | null> {
     return CallModel.findOne({ idempotencyKey });
   }

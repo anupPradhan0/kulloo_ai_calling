@@ -86,6 +86,7 @@ export class CallService {
     const now = new Date();
     // Plivo+FreeSWITCH outbound: we only get the real FS channel UUID when ESL connects.
     // Mongo unique index { provider, providerCallId } treats multiple nulls as duplicates — use a stable placeholder until ESL patches it.
+    // Stable spine (Jambonz call_sid): `_id` is created before Plivo dial and passed as KullooCallId on the SIP leg.
     const outboundId = new Types.ObjectId();
     const call = await this.callRepository.create({
       _id: outboundId,
@@ -112,7 +113,7 @@ export class CallService {
         to: payload.to,
         recordingEnabled: payload.recordingEnabled,
         message: "Hello from kulloo hello-call.",
-        kullooCallId: call._id.toString(),
+        kullooCallId: call.callSid ?? call._id.toString(),
       });
 
       if (payload.provider === "plivo") {

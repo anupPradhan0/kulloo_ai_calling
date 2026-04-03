@@ -30,10 +30,12 @@ export class EslCallHandlerService {
     message: string,
     extra?: unknown,
   ): void {
+    const stableCallSid = ctx?.callId;
     const meta: Record<string, unknown> = {
       component: "esl",
       ...(ctx?.correlationId ? { correlationId: ctx.correlationId } : {}),
       ...(ctx?.callId ? { callId: ctx.callId } : {}),
+      ...(stableCallSid ? { callSid: stableCallSid } : {}),
       ...(ctx?.uuid ? { channelUuid: ctx.uuid } : {}),
     };
     if (extra !== undefined && extra !== "") {
@@ -188,6 +190,7 @@ export class EslCallHandlerService {
     return evt;
   }
 
+  /** Value = `Call._id` hex (Jambonz-style stable id); SIP header name remains `KullooCallId`. */
   private extractKullooCallId(headersObj: Record<string, unknown>): string | null {
     const candidates = Object.entries(headersObj)
       .filter(([k]) => k.toLowerCase().includes("kulloocallid"))
@@ -315,7 +318,7 @@ export class EslCallHandlerService {
     }
   }
 
-  private attachDtmfLogger(conn: Connection, callId: string): () => void {
+  private attachDtmfLogger(conn: Connection, stableCallId: string): () => void {
     // Both DTMF and CHANNEL_DTMF may fire; dedupe very close duplicates.
     let last: { digit: string; at: number } | null = null;
 
@@ -333,9 +336,9 @@ export class EslCallHandlerService {
       if (last && last.digit === d && now - last.at < 250) return;
       last = { digit: d, at: now };
 
-      this.log(null, "info", `DTMF received: ${d}`);
+      this.log({ callId: stableCallId }, "info", `DTMF received: ${d}`);
       metrics.incCounter("dtmfCount");
-      this.callService.callRepository.findById(callId).then((call) => {
+      this.callService.callRepository.findByStableCallId(stableCallId).then((call) => {
         if (!call) return;
         return this.callService.pushEvent(call, "dtmf", { digit: d, at: new Date().toISOString() });
       }).catch((err) => {
@@ -605,7 +608,7 @@ export class EslCallHandlerService {
       let created = false;
       const kullooCallId = input.kullooCallId && typeof input.kullooCallId === "string" ? input.kullooCallId : null;
       if (kullooCallId && /^[a-fA-F0-9]{24}$/.test(kullooCallId)) {
-        const existing = await this.callService.callRepository.findById(kullooCallId);
+        const existing = await this.callService.callRepository.findByStableCallId(kullooCallId);
         if (existing) {
           // Keep API `from` / `to` (dialed PSTN); FreeSWITCH often reports extension (e.g. 1000) as destination_number.
           const updated = await this.callService.callRepository.updateById(existing._id.toString(), {
@@ -785,7 +788,7 @@ export class EslCallHandlerService {
     try {
       const filePath = path.join(this.recordingsDir, `${callUuid}.wav`);
       
-      const call = await this.callService.callRepository.findById(callId);
+      const call = await this.callService.callRepository.findByStableCallId(callId);
       if (!call) {
         this.log({ callId, uuid: callUuid }, "error", "Call not found for recording completion");
         return;

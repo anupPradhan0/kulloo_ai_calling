@@ -58,6 +58,7 @@ function firstPlivoString(val: unknown): string | undefined {
  * Plivo may call the Answer URL with GET or POST. Custom SIP headers from `sipHeaders` on `calls.create`
  * show up as `X-PH-KullooCallId` (see Plivo docs). They can appear in query string, form body, or with
  * slightly different key spelling — merge sources and fall back to scanning keys.
+ * Value is always `Call._id` hex (stable id / Jambonz `call_sid` equivalent); header name stays `KullooCallId`.
  */
 function extractPlivoKullooCallId(req: express.Request): string | undefined {
   const query = req.query as Record<string, unknown>;

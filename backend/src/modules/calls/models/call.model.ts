@@ -13,8 +13,15 @@ export type CallStatus =
   | "completed"
   | "failed";
 
+/**
+ * Call persistence. The canonical **stable business id** (same role as Jambonz `call_sid`) is
+ * `Call._id` as a 24-char hex string. It is propagated to the media leg on SIP as custom header
+ * `KullooCallId` (not `X-Call-Sid`, by design). API JSON also exposes this as virtual `callSid`.
+ */
 export interface CallDocument {
   _id: Types.ObjectId;
+  /** Same as `_id.toHexString()` when the document is serialized (`toJSON` / `res.json`). */
+  callSid?: string;
   direction: CallDirection;
   provider: CallProvider;
   upstreamProvider?: CallProvider;
@@ -27,6 +34,7 @@ export interface CallDocument {
   toE164?: string;
   callerName?: string;
   status: CallStatus;
+  /** HTTP request / log correlation (per request), not the telephony stable id. */
   correlationId: string;
   providerCallId?: string;
   idempotencyKey?: string;
@@ -83,5 +91,12 @@ const callSchema = new Schema<CallDocument>(
 callSchema.index({ provider: 1, providerCallId: 1 }, { unique: true, sparse: true });
 // Dedupe upstream provider call IDs (e.g., Plivo request_uuid) when present.
 callSchema.index({ upstreamProvider: 1, upstreamCallId: 1 }, { unique: true, sparse: true });
+
+callSchema.virtual("callSid").get(function () {
+  return String(this.get("_id"));
+});
+
+callSchema.set("toJSON", { virtuals: true });
+callSchema.set("toObject", { virtuals: true });
 
 export const CallModel = model<CallDocument>("Call", callSchema);
