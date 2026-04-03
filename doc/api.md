@@ -26,6 +26,8 @@ All routes below are relative to the base URL.
 
 ## Calls
 
+Full outbound (Plivo → FreeSWITCH → ESL) architecture and data flow: see [outbound-calls.md](./outbound-calls.md).
+
 - `POST /api/calls/outbound/hello`
   - Runs the outbound “hello” flow
   - Required header: `Idempotency-Key: <unique>`
