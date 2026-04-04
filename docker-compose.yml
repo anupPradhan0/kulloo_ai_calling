@@ -10,6 +10,15 @@ services:
     volumes:
       - mongodb_data:/data/db
 
+  redis:
+    image: redis:7-alpine
+    container_name: sip-backend-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
   freeswitch:
     image: drachtio/drachtio-freeswitch-mrf:latest
     container_name: kulloo-freeswitch
@@ -25,3 +34,4 @@ services:
 
 volumes:
   mongodb_data:
+  redis_data:

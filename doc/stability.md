@@ -1,6 +1,7 @@
   Focus on these 6 stability items first (highest impact for your current inbound setup):
   1. Idempotency + dedupe
   • Ensure repeated Plivo webhooks (answer/hangup) and repeated ESL events don’t create duplicate Call/Recording docs.
+  • With Redis (`REDIS_URL`), outbound idempotency keys and recording callbacks get a dedupe/cache layer; see `doc/redis.md`.
   2. Plivo webhook verification
   • Validate Plivo signatures so random traffic can’t trigger calls or mark calls completed.
   3. ESL failure handling + timeouts

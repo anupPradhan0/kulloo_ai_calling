@@ -17,6 +17,7 @@
     "drachtio-srf": "^5.0.20",
     "express": "^4.21.2",
     "helmet": "^8.1.0",
+    "ioredis": "^5.10.1",
     "modesl": "^1.1.8",
     "mongoose": "^8.13.2",
     "morgan": "^1.10.0",

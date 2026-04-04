@@ -6,6 +6,14 @@ import type { EslCallHandlerService } from "./services/freeswitch/esl-call-handl
 import { OrphanCallsRecoveryService } from "./services/recovery/orphan-calls-recovery.service";
 import { RecordingsSyncService } from "./services/recovery/recordings-sync.service";
 import { logger } from "./utils/logger";
+import { disconnectRedis } from "./services/redis/redis.client";
+
+function shutdownRedis(): void {
+  void disconnectRedis().catch(() => undefined);
+}
+
+process.once("SIGTERM", shutdownRedis);
+process.once("SIGINT", shutdownRedis);
 
 function listenWithPortFallback(startPort: number, maxAttempts = 10): Promise<void> {
   return new Promise((resolve, reject) => {

@@ -4,6 +4,8 @@ Base URL (production): `https://kulloocall.anuppradhan.in`
 
 All routes below are relative to the base URL.
 
+Optional **Redis** (`REDIS_URL`) enables idempotency caching and recording webhook dedupe; see [redis.md](./redis.md).
+
 ## Health
 
 - `GET /api/health/live`

@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { Types } from "mongoose";
 import { ApiError } from "../../../utils/api-error";
+import { isRedisConfigured } from "../../../config/env";
+import { metrics } from "../../../services/observability/metrics.service";
+import {
+  peekCachedCallIdForIdempotencyKey,
+  setCachedCallIdForIdempotencyKey,
+} from "../../../services/redis/idempotency-cache.service";
 import { CallEventRepository } from "../repositories/call-event.repository";
 import { CallRepository } from "../repositories/call.repository";
 import { RecordingRepository } from "../repositories/recording.repository";
@@ -23,8 +29,24 @@ export class CallService {
   private readonly telephonyAdapter = new TelephonyAdapter();
 
   async runOutboundHelloFlow(payload: OutboundHelloInput, idempotencyKey: string): Promise<HelloFlowResult> {
+    if (isRedisConfigured()) {
+      const cachedId = await peekCachedCallIdForIdempotencyKey(idempotencyKey);
+      if (cachedId) {
+        const fromCache = await this.callRepository.findById(cachedId);
+        if (fromCache && fromCache.idempotencyKey === idempotencyKey) {
+          metrics.incCounter("redisIdempotencyHits");
+          return {
+            call: fromCache,
+            recordings: await this.recordingRepository.listByCallId(fromCache._id.toString()),
+          };
+        }
+      }
+      metrics.incCounter("redisIdempotencyMisses");
+    }
+
     const existingCall = await this.callRepository.findByIdempotencyKey(idempotencyKey);
     if (existingCall) {
+      await setCachedCallIdForIdempotencyKey(idempotencyKey, existingCall._id.toString());
       return {
         call: existingCall,
         recordings: await this.recordingRepository.listByCallId(existingCall._id.toString()),
@@ -53,6 +75,7 @@ export class CallService {
       recordingEnabled: payload.recordingEnabled,
       timestamps: { receivedAt: now },
     });
+    await setCachedCallIdForIdempotencyKey(idempotencyKey, call._id.toString());
     await this.pushEvent(call, "initiated", payload);
 
     try {

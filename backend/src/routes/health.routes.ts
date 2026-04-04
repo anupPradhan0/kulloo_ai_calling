@@ -1,5 +1,7 @@
 import { Router } from "express";
 import mongoose from "mongoose";
+import { isRedisConfigured } from "../config/env";
+import { pingRedis } from "../services/redis/redis.client";
 
 export const healthRouter = Router();
 
@@ -12,11 +14,24 @@ healthRouter.get("/live", (_req, res) => {
   });
 });
 
-/** Readiness: verifies MongoDB responds to ping. */
+/** Readiness: verifies MongoDB responds to ping; Redis when REDIS_URL is set. */
 healthRouter.get("/", async (_req, res) => {
   const mongo = await checkMongo();
 
-  const ok = mongo.ok;
+  let redis: { configured: boolean; ok: boolean; latencyMs?: number; error?: string };
+  if (isRedisConfigured()) {
+    const ping = await pingRedis();
+    redis = {
+      configured: true,
+      ok: ping.ok,
+      latencyMs: ping.latencyMs,
+      ...(ping.error ? { error: ping.error } : {}),
+    };
+  } else {
+    redis = { configured: false, ok: true };
+  }
+
+  const ok = mongo.ok && (!redis.configured || redis.ok);
   const status = ok ? "ok" : "degraded";
 
   res.status(ok ? 200 : 503).json({
@@ -25,6 +40,7 @@ healthRouter.get("/", async (_req, res) => {
     message: ok ? "Backend is healthy" : "Backend is up but dependencies failed checks",
     checks: {
       mongodb: mongo,
+      redis,
     },
     uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),

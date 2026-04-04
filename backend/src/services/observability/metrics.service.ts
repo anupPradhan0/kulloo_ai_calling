@@ -1,4 +1,10 @@
-export type CounterName = "failedCalls" | "recordingFailed" | "dtmfCount";
+export type CounterName =
+  | "failedCalls"
+  | "recordingFailed"
+  | "dtmfCount"
+  | "redisIdempotencyHits"
+  | "redisIdempotencyMisses"
+  | "webhookDedupeSkips";
 
 export class MetricsService {
   private activeCalls = 0;
@@ -6,6 +12,9 @@ export class MetricsService {
     failedCalls: 0,
     recordingFailed: 0,
     dtmfCount: 0,
+    redisIdempotencyHits: 0,
+    redisIdempotencyMisses: 0,
+    webhookDedupeSkips: 0,
   };
 
   incActiveCalls(): void {
@@ -25,12 +34,18 @@ export class MetricsService {
     failedCalls: number;
     recordingFailed: number;
     dtmfCount: number;
+    redisIdempotencyHits: number;
+    redisIdempotencyMisses: number;
+    webhookDedupeSkips: number;
   } {
     return {
       activeCalls: this.activeCalls,
       failedCalls: this.counters.failedCalls,
       recordingFailed: this.counters.recordingFailed,
       dtmfCount: this.counters.dtmfCount,
+      redisIdempotencyHits: this.counters.redisIdempotencyHits,
+      redisIdempotencyMisses: this.counters.redisIdempotencyMisses,
+      webhookDedupeSkips: this.counters.webhookDedupeSkips,
     };
   }
 }

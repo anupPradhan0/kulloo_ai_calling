@@ -2,7 +2,7 @@
 #
 # On your VPS (with repo cloned):
 #   cp backend/.env.example .env
-#   # edit .env — set MONGODB_URI=mongodb://mongodb:27017/sip-backend, PUBLIC_BASE_URL, Plivo/Twilio, etc.
+#   # edit .env — set MONGODB_URI=mongodb://mongodb:27017/sip-backend, REDIS_URL=redis://redis:6379 (optional), PUBLIC_BASE_URL, Plivo/Twilio, etc.
 #   docker compose -f docker-compose.server.yml up -d --build
 #
 # API: http://<host>:5000  — health: GET /api/health
@@ -32,6 +32,21 @@ services:
       retries: 5
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    container_name: kulloo-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   api:
     build:
       context: ./backend
@@ -50,10 +65,13 @@ services:
       PORT: "5000"
       MONGODB_URI: mongodb://mongodb:27017/sip-backend
       RECORDINGS_DIR: /recordings
+      REDIS_URL: redis://redis:6379
     volumes:
       - recordings_data:/recordings
     depends_on:
       mongodb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   # Optional: SIP media + local WAV recordings (needs ./freeswitch/conf from repo)
@@ -73,4 +91,5 @@ services:
 
 volumes:
   mongodb_data:
+  redis_data:
   recordings_data:

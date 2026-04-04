@@ -13,6 +13,8 @@ import {
   twilioRecordingCallbackSchema,
 } from "../validators/call.schema";
 import { CallService } from "../services/call.service";
+import { metrics } from "../../../services/observability/metrics.service";
+import { claimRecordingWebhookOnce } from "../../../services/redis/webhook-dedupe.service";
 
 const callService = new CallService();
 
@@ -118,6 +120,12 @@ export async function getRecordingFile(req: Request, res: Response, next: NextFu
 export async function twilioRecordingCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const payload = parseWithSchema(twilioRecordingCallbackSchema, req.body);
+    const first = await claimRecordingWebhookOnce("twilio", [payload.CallSid, payload.RecordingSid]);
+    if (!first) {
+      metrics.incCounter("webhookDedupeSkips");
+      res.status(200).json({ success: true, duplicate: true });
+      return;
+    }
     const recording = await callService.ingestTwilioRecordingCallback(payload);
     res.status(200).json({ success: true, data: recording });
   } catch (error) {
@@ -129,6 +137,12 @@ export async function plivoRecordingCallback(req: Request, res: Response, next: 
   try {
     const { callUuid } = parseWithSchema(plivoRecordingCallbackQuerySchema, req.query);
     const payload = parseWithSchema(plivoRecordingCallbackSchema, req.body);
+    const first = await claimRecordingWebhookOnce("plivo", [callUuid, payload.RecordingID]);
+    if (!first) {
+      metrics.incCounter("webhookDedupeSkips");
+      res.status(200).json({ success: true, duplicate: true });
+      return;
+    }
     const recording = await callService.ingestPlivoRecordingCallback(callUuid, payload);
     res.status(200).json({ success: true, data: recording });
   } catch (error) {
@@ -139,6 +153,12 @@ export async function plivoRecordingCallback(req: Request, res: Response, next: 
 export async function freeswitchRecordingCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const payload = parseWithSchema(freeswitchRecordingCallbackSchema, req.body);
+    const first = await claimRecordingWebhookOnce("freeswitch", [payload.callUuid]);
+    if (!first) {
+      metrics.incCounter("webhookDedupeSkips");
+      res.status(200).json({ success: true, duplicate: true });
+      return;
+    }
 
     const durationSec =
       typeof payload.durationSec === "string" && payload.durationSec.trim().length > 0

@@ -1,0 +1,24 @@
+# Redis only — run from repo root:
+#   docker compose -f docker-compose.redis.yml up -d
+#
+# Connect from host: redis://localhost:6379
+# From another Compose stack on the same Docker network, use service hostname `redis`.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: kulloo-redis-standalone
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_standalone_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  redis_standalone_data:
