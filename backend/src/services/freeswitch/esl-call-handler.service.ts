@@ -1,7 +1,10 @@
 /**
- * Outbound ESL from FreeSWITCH’s perspective: FS opens a TCP connection to this Node `modesl` server per channel.
- * Runs the hello flow (answer, playback, record_session, DTMF, hangup) and persists via `CallService`.
+ * Listens for inbound TCP connections from FreeSWITCH when the dialplan runs the socket application (outbound ESL pattern).
+ * Each connection drives one media leg: answer, tone, record to WAV, optional early DTMF stop, hangup, and Mongo updates through CallService.
+ * Recovery jobs use getActiveProviderCallIds to avoid closing calls that still have an open ESL session in this process.
  */
+
+/** Layer: telephony infrastructure — Event Socket server and media scripting; all persistence goes through CallService. */
 import { Server as EslServer, Connection } from "modesl";
 import { CallService } from "../../modules/calls/services/call.service";
 import type { CallDocument } from "../../modules/calls/models/call.model";
@@ -12,6 +15,7 @@ import fs from "node:fs/promises";
 import { metrics } from "../observability/metrics.service";
 import { logger, serializeError } from "../../utils/logger";
 
+/** Constructor options for the ESL TCP server: listen address, port, and where WAV files are written. */
 export interface EslCallHandlerOptions {
   port: number;
   host?: string;
@@ -19,7 +23,7 @@ export interface EslCallHandlerOptions {
   mediaServer?: null;
 }
 
-
+/** Manages the modesl server, per-connection hello script, and coordination with orphan recovery via active channel tracking. */
 export class EslCallHandlerService {
   private server: EslServer | null = null;
   private callService: CallService;
@@ -59,6 +63,9 @@ export class EslCallHandlerService {
   private static readonly HANGUP_TIMEOUT_MS = 3000;
   private static readonly GETVAR_TIMEOUT_MS = 2000;
 
+  /**
+   * Races an async ESL operation against a timer so a stuck FreeSWITCH leg cannot hang the Node process forever.
+   */
   private async withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
     let timer: NodeJS.Timeout | undefined;
     const timeout = new Promise<never>((_resolve, reject) => {
@@ -71,6 +78,9 @@ export class EslCallHandlerService {
     }
   }
 
+  /**
+   * Sends an ESL api/getvar style command and parses the reply, rejecting on FreeSWITCH -ERR responses.
+   */
   private async sendRecvAsync(
     conn: Connection,
     command: string,
@@ -89,6 +99,9 @@ export class EslCallHandlerService {
     });
   }
 
+  /**
+   * Reads a channel variable from FreeSWITCH with a timeout; returns null when undefined or on failure.
+   */
   private async getVar(conn: Connection, name: string): Promise<string | null> {
     try {
       const { body, replyText } = await this.withTimeout(
@@ -123,6 +136,9 @@ export class EslCallHandlerService {
     return null;
   }
 
+  /**
+   * Maps common FreeSWITCH channel header names to caller, callee, name, and UUID with fallbacks when headers differ by trunk.
+   */
   private parseChannelHeaders(
     getHeader: (name: string) => string | null,
   ): { callUuid: string; fromRaw: string | null; toRaw: string | null; callerName: string | null } {
@@ -205,6 +221,9 @@ export class EslCallHandlerService {
     return /^[a-fA-F0-9]{24}$/.test(val) ? val : null;
   }
 
+  /**
+   * Runs a dialplan application (playback, sleep, hangup, etc.) and waits for CHANNEL_EXECUTE_COMPLETE or times out.
+   */
   private async execAndWait(conn: Connection, app: string, arg = "", timeoutMs?: number): Promise<void> {
     const ms = timeoutMs ?? EslCallHandlerService.PLAYBACK_TIMEOUT_MS;
     await new Promise<void>((resolve, reject) => {
@@ -246,6 +265,9 @@ export class EslCallHandlerService {
     });
   }
 
+  /**
+   * Listens for DTMF events until digit 1 or the timeout; used to shorten the recording window interactively.
+   */
   private waitForDtmf1(
     conn: Connection,
     timeoutMs: number,
@@ -281,6 +303,9 @@ export class EslCallHandlerService {
     });
   }
 
+  /**
+   * Marks the call failed in Mongo when possible, increments failure metrics, and attempts to hang up the channel.
+   */
   private async failAndHangup(input: {
     conn: Connection;
     callId?: string;
@@ -322,6 +347,9 @@ export class EslCallHandlerService {
     }
   }
 
+  /**
+   * Subscribes to DTMF events for metrics and CallEvent rows; returns a detach function for cleanup after the flow.
+   */
   private attachDtmfLogger(conn: Connection, stableCallId: string): () => void {
     // Both DTMF and CHANNEL_DTMF may fire; dedupe very close duplicates.
     let last: { digit: string; at: number } | null = null;
@@ -359,6 +387,9 @@ export class EslCallHandlerService {
     };
   }
 
+  /**
+   * Stores listen configuration and constructs CallService used for all database updates from this handler.
+   */
   constructor(options: EslCallHandlerOptions) {
     this.port = options.port;
     this.host = options.host || "0.0.0.0";
@@ -366,6 +397,9 @@ export class EslCallHandlerService {
     this.callService = new CallService();
   }
 
+  /**
+   * Starts the TCP server; resolves when listening, rejects on bind errors, and registers per-connection handlers.
+   */
   async listen(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
@@ -395,6 +429,9 @@ export class EslCallHandlerService {
     });
   }
 
+  /**
+   * Parses channel identity from initial ESL events and variables, tracks active UUID, then runs executeCallFlow for the hello script.
+   */
   private async handleConnection(conn: Connection): Promise<void> {
     let callUuid: string | null = null;
 
@@ -583,10 +620,17 @@ export class EslCallHandlerService {
     }
   }
 
+  /**
+   * Returns channel UUIDs currently in an active ESL session so orphan sweeps skip them.
+   */
   getActiveProviderCallIds(): ReadonlySet<string> {
     return this.activeProviderCallIds;
   }
 
+  /**
+   * Core hello script: attach or create Call, answer, play tone, record WAV, optional DTMF early stop, finalize recording metadata, hang up.
+   * @returns Mongo call id string and filesystem path to the WAV for logging; throws on unrecoverable ESL errors after failAndHangup attempt.
+   */
   private async executeCallFlow(
     conn: Connection,
     input: {
@@ -788,6 +832,9 @@ export class EslCallHandlerService {
     }
   }
 
+  /**
+   * After stop_record_session, waits for a non-empty WAV, then marks Recording and CallEvent rows completed or failed.
+   */
   private async handleRecordingComplete(callId: string, callUuid: string, recordingPath: string): Promise<void> {
     try {
       const filePath = path.join(this.recordingsDir, `${callUuid}.wav`);
@@ -893,6 +940,9 @@ export class EslCallHandlerService {
     }
   }
 
+  /**
+   * Stops accepting new ESL connections and closes the underlying TCP server (used on shutdown or tests).
+   */
   close(): void {
     if (this.server) {
       logger.info("esl_server_closing", { component: "esl" });

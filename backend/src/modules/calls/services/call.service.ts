@@ -1,7 +1,9 @@
 /**
- * Call domain orchestration: outbound hello (idempotency + Plivo), recording webhooks, and helpers used by ESL.
- * Talks to Mongo through repositories and to carriers through `TelephonyAdapter`; Redis via dedicated services.
+ * Owns call and recording business logic: outbound hello with idempotency, provider recording webhooks, and disk-backed recording helpers.
+ * HTTP controllers and the ESL handler both call into this class so Mongo and Redis rules stay in one place while adapters talk to carriers.
  */
+
+/** Layer: business logic — orchestrates repositories, Redis helpers, and TelephonyAdapter; no Express request objects. */
 import { randomUUID } from "node:crypto";
 import { Types } from "mongoose";
 import { ApiError } from "../../../utils/api-error";
@@ -37,6 +39,13 @@ export class CallService {
   private readonly recordingRepository = new RecordingRepository();
   private readonly telephonyAdapter = new TelephonyAdapter();
 
+  /**
+   * Runs the outbound hello flow: checks Redis and Mongo for idempotency, creates the call, dials the provider, and simulates completion for non-Plivo paths.
+   * For Plivo, stops after the carrier connects and leaves play/record/hangup to FreeSWITCH and ESL so statuses stay truthful.
+   * @param payload Validated body from POST /api/calls/outbound/hello.
+   * @param idempotencyKey Client header value that must repeat for safe retries.
+   * @returns Final call document and any recordings created for simulated providers.
+   */
   async runOutboundHelloFlow(payload: OutboundHelloInput, idempotencyKey: string): Promise<HelloFlowResult> {
     const cachedId = await peekCachedCallIdForIdempotencyKey(idempotencyKey);
     if (cachedId) {
@@ -164,10 +173,16 @@ export class CallService {
     }
   }
 
+  /**
+   * Lists recording documents stored in Mongo for a given call id.
+   */
   async listRecordingsByCall(callId: string): Promise<RecordingDocument[]> {
     return this.recordingRepository.listByCallId(callId);
   }
 
+  /**
+   * Fetches one recording by Mongo id or throws 404 for the HTTP layer.
+   */
   async getRecordingById(recordingId: string): Promise<RecordingDocument> {
     const recording = await this.recordingRepository.findById(recordingId);
     if (!recording) {
@@ -176,6 +191,9 @@ export class CallService {
     return recording;
   }
 
+  /**
+   * Upserts Twilio recording metadata after webhook deduplication has already run in the controller path.
+   */
   async ingestTwilioRecordingCallback(payload: {
     CallSid: string;
     RecordingSid: string;
@@ -210,6 +228,9 @@ export class CallService {
     });
   }
 
+  /**
+   * Merges Plivo recording callback data with an existing pending ESL recording row when possible, else creates a row.
+   */
   async ingestPlivoRecordingCallback(
     callUuid: string,
     payload: {
@@ -261,6 +282,9 @@ export class CallService {
     });
   }
 
+  /**
+   * Registers a FreeSWITCH WAV that already exists on disk for a known call (expects call row to exist).
+   */
   async registerFreeswitchRecording(callUuid: string): Promise<RecordingDocument> {
     const call = await this.callRepository.findByProviderCallId(callUuid);
     if (!call) {
@@ -290,6 +314,9 @@ export class CallService {
     return recording;
   }
 
+  /**
+   * Handles FreeSWITCH HTTP recording callback: deduped at webhook layer, may create a minimal inbound call, waits for WAV file, then stores metadata.
+   */
   async registerFreeswitchRecordingFromCallback(input: {
     callUuid: string;
     durationSec?: number;
@@ -373,6 +400,9 @@ export class CallService {
     return recording;
   }
 
+  /**
+   * Updates call status and related timestamps in Mongo; throws when the call id does not exist.
+   */
   async setStatus(
     callId: string,
     status: CallStatus,
@@ -386,6 +416,9 @@ export class CallService {
     return updated;
   }
 
+  /**
+   * Appends a CallEvent row for analytics and troubleshooting.
+   */
   async pushEvent(call: CallDocument | { _id: unknown; correlationId: string }, eventType: string, payload?: Record<string, unknown>): Promise<void> {
     await this.callEventRepository.create({
       callId: call._id as Types.ObjectId,
@@ -399,6 +432,9 @@ export class CallService {
     return provider === "sip-local" ? "connected" : "connected";
   }
 
+  /**
+   * Lists WAV files in the configured recordings directory for GET /api/recordings/local.
+   */
   async listLocalWavSummaries(): Promise<Array<{ uuid: string; filename: string; url: string }>> {
     const dir = path.resolve(env.recordingsDirRaw ?? "/recordings");
     let files: string[] = [];
@@ -415,6 +451,9 @@ export class CallService {
     }));
   }
 
+  /**
+   * Resolves a channel UUID to an absolute WAV path for streaming to the browser after validating the basename.
+   */
   async resolveLocalRecordingAbsolutePath(uuidRaw: string): Promise<string> {
     const uuid = uuidRaw?.replace(/\.wav$/i, "");
     if (!uuid || !/^[\w-]+$/.test(uuid)) {
@@ -430,6 +469,9 @@ export class CallService {
     return filePath;
   }
 
+  /**
+   * Wraps Twilio ingestion with Redis deduplication so duplicate webhooks return duplicate: true without double writes.
+   */
   async processTwilioRecordingWebhook(
     payload: TwilioRecordingCallbackPayload,
   ): Promise<{ duplicate: true } | { duplicate: false; recording: RecordingDocument }> {
@@ -442,6 +484,9 @@ export class CallService {
     return { duplicate: false, recording };
   }
 
+  /**
+   * Same as Twilio path for Plivo recording callbacks using call UUID and RecordingID in the dedupe key.
+   */
   async processPlivoRecordingWebhook(
     callUuid: string,
     payload: PlivoRecordingCallbackPayload,
@@ -455,6 +500,9 @@ export class CallService {
     return { duplicate: false, recording };
   }
 
+  /**
+   * FreeSWITCH recording webhook with dedupe on call UUID only (one completion event per channel).
+   */
   async processFreeswitchRecordingWebhook(input: {
     callUuid: string;
     durationSec?: number;
@@ -472,18 +520,30 @@ export class CallService {
 
   // --- ESL / FreeSWITCH: delegate persistence without exposing repositories ---
 
+  /**
+   * Thin wrapper used by ESL to load a call by Mongo id.
+   */
   async findCallDocumentById(callId: string): Promise<CallDocument | null> {
     return this.callRepository.findById(callId);
   }
 
+  /**
+   * Loads a call by stable KullooCallId (same as Mongo _id hex).
+   */
   async findCallDocumentByStableCallId(stableCallId: string): Promise<CallDocument | null> {
     return this.callRepository.findByStableCallId(stableCallId);
   }
 
+  /**
+   * Partial update of a call from ESL when attaching outbound rows to a channel.
+   */
   async updateCallDocument(id: string, patch: Partial<CallDocument>): Promise<CallDocument | null> {
     return this.callRepository.updateById(id, patch);
   }
 
+  /**
+   * Creates or returns existing call for a FreeSWITCH channel UUID used on inbound ESL paths.
+   */
   async findOrCreateCallByProviderCallId(
     provider: CallProvider,
     providerCallId: string,
@@ -492,16 +552,25 @@ export class CallService {
     return this.callRepository.findOrCreateByProviderCallId(provider, providerCallId, payload);
   }
 
+  /**
+   * Looks up call by providerCallId (typically FreeSWITCH channel UUID).
+   */
   async findCallDocumentByProviderCallId(providerCallId: string): Promise<CallDocument | null> {
     return this.callRepository.findByProviderCallId(providerCallId);
   }
 
+  /**
+   * Finds a recording row by provider recording id (often the same as channel UUID for FreeSWITCH WAVs).
+   */
   async findRecordingDocumentByProviderRecordingId(
     providerRecordingId: string,
   ): Promise<RecordingDocument | null> {
     return this.recordingRepository.findByProviderRecordingId(providerRecordingId);
   }
 
+  /**
+   * Updates recording fields from ESL when finalizing or correcting metadata.
+   */
   async updateRecordingDocument(
     id: string,
     patch: Parameters<RecordingRepository["updateById"]>[1],
@@ -509,6 +578,9 @@ export class CallService {
     return this.recordingRepository.updateById(id, patch);
   }
 
+  /**
+   * Creates a recording row from ESL when starting record_session.
+   */
   async createRecordingDocument(
     payload: Omit<RecordingDocument, "_id" | "createdAt" | "updatedAt">,
   ): Promise<RecordingDocument> {

@@ -1,13 +1,25 @@
+/**
+ * Centralizes Mongoose queries for Call documents: create, find by various keys, status updates, and orphan sweeps.
+ * Unique indexes on provider pairs and idempotency keys are defined on the schema; this class respects them when inserting.
+ */
+
+/** Layer: database only — call persistence queries; status meaning is owned by CallService. */
 import { Types } from "mongoose";
 import { CallDocument, CallModel, CallProvider, CallStatus } from "../models/call.model";
 
 export class CallRepository {
+  /**
+   * Creates a call; optional explicit _id is used for outbound hello to pre-assign the stable KullooCallId.
+   */
   async create(
     payload: Omit<CallDocument, "_id" | "createdAt" | "updatedAt"> & { _id?: Types.ObjectId },
   ): Promise<CallDocument> {
     return CallModel.create(payload);
   }
 
+  /**
+   * Finds by Mongo id string; invalid id format yields null without hitting the database.
+   */
   async findById(id: string): Promise<CallDocument | null> {
     if (!Types.ObjectId.isValid(id)) {
       return null;
@@ -20,14 +32,23 @@ export class CallRepository {
     return this.findById(stableCallId);
   }
 
+  /**
+   * Finds the row previously created for the same Idempotency-Key header on outbound hello.
+   */
   async findByIdempotencyKey(idempotencyKey: string): Promise<CallDocument | null> {
     return CallModel.findOne({ idempotencyKey });
   }
 
+  /**
+   * Looks up by FreeSWITCH channel UUID (or other providerCallId) when that is the media leg identifier.
+   */
   async findByProviderCallId(providerCallId: string): Promise<CallDocument | null> {
     return CallModel.findOne({ providerCallId });
   }
 
+  /**
+   * Returns existing call for provider+providerCallId or creates one; handles duplicate key races by re-reading.
+   */
   async findOrCreateByProviderCallId(
     provider: CallProvider,
     providerCallId: string,
@@ -50,6 +71,9 @@ export class CallRepository {
     }
   }
 
+  /**
+   * Updates status and flattens timestamp patches under the timestamps subdocument.
+   */
   async updateStatus(
     id: string,
     status: CallStatus,
@@ -67,6 +91,9 @@ export class CallRepository {
     );
   }
 
+  /**
+   * Sets providerCallId when ESL attaches the real FreeSWITCH UUID to an outbound call.
+   */
   async setProviderCallId(id: string, providerCallId: string): Promise<void> {
     if (!Types.ObjectId.isValid(id)) {
       return;
@@ -74,6 +101,9 @@ export class CallRepository {
     await CallModel.findByIdAndUpdate(id, { providerCallId });
   }
 
+  /**
+   * Applies a partial document update while stripping identity fields that should not change accidentally.
+   */
   async updateById(id: string, patch: Partial<CallDocument>): Promise<CallDocument | null> {
     if (!Types.ObjectId.isValid(id)) {
       return null;
@@ -85,10 +115,16 @@ export class CallRepository {
     return CallModel.findByIdAndUpdate(id, safePatch, { new: true, runValidators: true });
   }
 
+  /**
+   * Shortcut for FreeSWITCH channel UUID lookups used by ESL and recording sync.
+   */
   async findFreeswitchCallByChannelUuid(channelUuid: string): Promise<CallDocument | null> {
     return CallModel.findOne({ provider: "freeswitch", providerCallId: channelUuid });
   }
 
+  /**
+   * Moves stale hangup-status calls to completed, optionally excluding channels still active in ESL.
+   */
   async sweepStaleHangupToCompleted(
     cutoff: Date,
     excludeProviderCallIds?: ReadonlySet<string>,
@@ -108,6 +144,9 @@ export class CallRepository {
     });
   }
 
+  /**
+   * Marks stale non-terminal calls as failed after grace period; excludes active provider ids when provided.
+   */
   async sweepStaleNonTerminalToFailed(
     cutoff: Date,
     excludeProviderCallIds: ReadonlySet<string> | undefined,

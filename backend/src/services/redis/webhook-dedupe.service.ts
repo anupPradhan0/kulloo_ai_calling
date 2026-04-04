@@ -1,10 +1,16 @@
-/** `SET … NX` keys so recording provider callbacks are processed at most once per logical event. */
+/**
+ * Prevents provider recording webhooks from running ingestion logic twice when the carrier retries the same delivery.
+ * Uses Redis SET with NX and expiry so the first request wins and duplicates still get a success response without side effects.
+ */
+
 import { env } from "../../config/env";
 import { getRedis } from "./redis.client";
 
 /**
- * First delivery of this webhook identity: returns true.
- * Duplicate (SET NX failed): returns false — respond 200 without re-processing.
+ * Attempts to claim exclusive processing for one logical webhook (Twilio, Plivo, or FreeSWITCH identity tuple).
+ * @param kind Which provider namespace to use in the Redis key.
+ * @param parts Values that together uniquely identify this webhook (for example call id and recording id).
+ * @returns true when this invocation should run business logic; false when a duplicate should short-circuit.
  */
 export async function claimRecordingWebhookOnce(kind: "twilio" | "plivo" | "freeswitch", parts: string[]): Promise<boolean> {
   const redis = getRedis();

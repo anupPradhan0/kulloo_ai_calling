@@ -1,3 +1,9 @@
+/**
+ * Append-only audit-style events attached to a call (initiated, answered, recording_started, and similar).
+ * Lets operators reconstruct a timeline without parsing logs; payload is flexible JSON for provider-specific fields.
+ */
+
+/** Layer: persistence shape only — event log documents; event naming conventions are enforced in services. */
 import { model, Schema, Types } from "mongoose";
 
 export interface CallEventDocument {

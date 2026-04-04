@@ -1,10 +1,14 @@
 /**
- * Outbound dial execution: Plivo/Twilio (and similar) SDK calls; keeps provider SDKs out of `CallService`.
+ * Places outbound calls through Twilio, Plivo, or a local simulator and returns timestamps the service uses for non-Plivo paths.
+ * Plivo only starts the carrier leg and bridges to FreeSWITCH; real media completion is driven by ESL, so this adapter returns early for Plivo.
  */
+
+/** Layer: external provider integration — SDK calls only; CallService owns Mongo and status semantics. */
 import { env } from "../../../config/env";
 import { ApiError } from "../../../utils/api-error";
 import { CallProvider } from "../models/call.model";
 
+/** Synthetic timeline fields after a provider accepts or simulates an outbound dial. */
 export interface OutboundExecutionResult {
   providerCallId: string;
   connectedAt: Date;
@@ -17,6 +21,7 @@ export interface OutboundExecutionResult {
   retrievalUrl?: string;
 }
 
+/** Input for starting an outbound hello leg toward a provider. */
 export interface OutboundExecutionInput {
   provider: CallProvider;
   from: string;
@@ -28,13 +33,18 @@ export interface OutboundExecutionInput {
 }
 
 export class TelephonyAdapter {
-  /** Append one query param without breaking existing ?foo=bar on base URL. */
+  /**
+   * Appends one query parameter to a URL whether or not it already contains a query string.
+   */
   private static appendQueryParam(baseUrl: string, key: string, value: string): string {
     const u = baseUrl.trim();
     const pair = `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
     return u.includes("?") ? `${u}&${pair}` : `${u}?${pair}`;
   }
 
+  /**
+   * Dispatches to Twilio, Plivo, or the local simulator based on input.provider.
+   */
   async executeOutboundHello(input: OutboundExecutionInput): Promise<OutboundExecutionResult> {
     if (input.provider === "twilio") {
       return this.executeTwilioHello(input);
@@ -45,6 +55,9 @@ export class TelephonyAdapter {
     return this.executeLocalSipHello(input);
   }
 
+  /**
+   * Returns an immediate fake timeline for development without real carriers.
+   */
   private async executeLocalSipHello(input: OutboundExecutionInput): Promise<OutboundExecutionResult> {
     const now = new Date();
     const recordingId = `rec-local-${Date.now()}`;
@@ -63,6 +76,9 @@ export class TelephonyAdapter {
     };
   }
 
+  /**
+   * Creates a Twilio call with TwiML that speaks and optionally records in Twilio’s cloud.
+   */
   private async executeTwilioHello(input: OutboundExecutionInput): Promise<OutboundExecutionResult> {
     const accountSid = env.twilioAccountSid;
     const authToken = env.twilioAuthToken;
@@ -98,6 +114,9 @@ export class TelephonyAdapter {
     };
   }
 
+  /**
+   * Starts a Plivo outbound call toward Answer URL; passes KullooCallId on SIP headers and query for reliable correlation.
+   */
   private async executePlivoHello(input: OutboundExecutionInput): Promise<OutboundExecutionResult> {
     const authId = env.plivoAuthId;
     const authToken = env.plivoAuthToken;

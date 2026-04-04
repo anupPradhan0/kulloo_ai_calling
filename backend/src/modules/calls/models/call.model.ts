@@ -1,3 +1,9 @@
+/**
+ * Mongoose schema and TypeScript types for the core Call aggregate: direction, provider ids, status machine, and timestamps.
+ * Indexes enforce deduplication for provider legs and upstream carriers; virtual callSid mirrors _id for API consumers.
+ */
+
+/** Layer: persistence shape only — defines stored fields and indexes; transitions are enforced in services. */
 import { model, Schema, Types } from "mongoose";
 
 export type CallDirection = "inbound" | "outbound";

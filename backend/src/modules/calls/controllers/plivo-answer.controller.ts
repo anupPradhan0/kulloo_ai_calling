@@ -1,6 +1,9 @@
 /**
- * Plivo Answer URL: returns XML to `<Dial>` into FreeSWITCH, forwarding `KullooCallId` when present.
+ * Builds Plivo XML responses for Answer URL (bridge into FreeSWITCH) and acknowledges Hang URL with JSON.
+ * Answer flow extracts KullooCallId from query or body so outbound calls pre-created in Mongo attach to the correct SIP leg.
  */
+
+/** Layer: HTTP only — reads env and request fields, returns XML or JSON; no Mongo writes here. */
 import { Request, Response } from "express";
 import { env } from "../../../config/env";
 import { logger } from "../../../utils/logger";
@@ -9,6 +12,9 @@ import {
   extractPlivoCallUuidFromSources,
 } from "../../../utils/plivo-payload";
 
+/**
+ * Responds with Plivo XML that dials the configured FreeSWITCH SIP URI and replays KullooCallId on the SIP leg when known.
+ */
 export function sendPlivoAnswerXml(req: Request, res: Response): void {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -72,6 +78,9 @@ export function sendPlivoAnswerXml(req: Request, res: Response): void {
   );
 }
 
+/**
+ * Minimal 200 JSON body so Plivo considers the hangup webhook delivered.
+ */
 export function plivoHangupAck(_req: Request, res: Response): void {
   res.status(200).json({ success: true });
 }

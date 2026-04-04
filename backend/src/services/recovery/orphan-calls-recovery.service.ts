@@ -1,9 +1,12 @@
 /**
- * Periodically marks stale non-terminal calls as failed after process restarts (coordinates with active ESL channels).
+ * Periodically finds call documents stuck in non-terminal states after a crash or deploy and marks them failed or completed.
+ * Skips provider call ids that the ESL handler reports as still active so live calls are not incorrectly closed.
  */
+
 import { CallRepository } from "../../modules/calls/repositories/call.repository";
 import { logger } from "../../utils/logger";
 
+/** Configuration for how old a row must be before it is eligible and how often to sweep. */
 export interface OrphanRecoveryOptions {
   graceMs: number;
   sweepIntervalMs: number;
@@ -33,6 +36,7 @@ const NON_TERMINAL_STATUSES: NonTerminalStatus[] = [
   "hangup",
 ];
 
+// Hangup is handled separately: stale hangup rows move to completed instead of failed.
 const STATUSES_TO_FAIL = NON_TERMINAL_STATUSES.filter((s) => s !== "hangup");
 
 export class OrphanCallsRecoveryService {
@@ -40,8 +44,15 @@ export class OrphanCallsRecoveryService {
   private running = false;
   private readonly callRepository = new CallRepository();
 
+  /**
+   * @param opts Grace period, interval, and optional active-call filter from ESL.
+   */
   constructor(private readonly opts: OrphanRecoveryOptions) {}
 
+  /**
+   * Runs one sweep immediately: completes stale hangups and fails other stale non-terminal calls, optionally excluding active channels.
+   * @param reason startup runs before interval sweeps; interval runs from the timer.
+   */
   async runOnce(reason: "startup" | "interval" = "startup"): Promise<void> {
     if (this.running) return;
     this.running = true;
@@ -57,6 +68,9 @@ export class OrphanCallsRecoveryService {
     }
   }
 
+  /**
+   * Starts a repeating timer that calls runOnce on the configured interval; no-op when interval is zero or negative.
+   */
   start(): void {
     if (this.timer) return;
     if (this.opts.sweepIntervalMs <= 0) return;
@@ -67,6 +81,9 @@ export class OrphanCallsRecoveryService {
     }, this.opts.sweepIntervalMs);
   }
 
+  /**
+   * Clears the interval timer so tests or shutdown can stop background work.
+   */
   stop(): void {
     if (!this.timer) return;
     clearInterval(this.timer);

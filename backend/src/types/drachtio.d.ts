@@ -1,3 +1,9 @@
+/**
+ * Type declarations for optional Drachtio and media-resource libraries and for the modesl Event Socket package.
+ * Kulloo’s hello flow uses modesl for FreeSWITCH outbound ESL; the Drachtio modules are declared for compatibility if referenced elsewhere.
+ * Keeping shapes here avoids TypeScript errors when importing packages that ship without their own types.
+ */
+
 declare module "drachtio-srf" {
   import { EventEmitter } from "events";
 

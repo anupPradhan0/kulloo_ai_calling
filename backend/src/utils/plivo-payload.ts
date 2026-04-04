@@ -1,7 +1,14 @@
 /**
- * Pure helpers for Plivo Answer URL query/body fields (no Express types).
+ * Reads Plivo Answer URL parameters and body fields without depending on Express request types.
+ * Plivo sends call identifiers and echoed SIP headers in inconsistent shapes (string vs array, different key names).
+ * The Plivo answer controller uses these helpers so XML generation stays small and testable.
  */
 
+/**
+ * Returns the first non-empty string from a query or body value Plivo may send as a string or single-element array.
+ * @param val Raw value from Plivo (string, array of strings, or something else).
+ * @returns Trimmed string or undefined when nothing usable is present.
+ */
 export function firstPlivoString(val: unknown): string | undefined {
   if (typeof val === "string" && val.trim().length > 0) return val.trim();
   if (Array.isArray(val) && typeof val[0] === "string" && val[0].trim()) return val[0].trim();
@@ -17,7 +24,10 @@ const KULLOO_CALL_ID_KEYS = [
 ] as const;
 
 /**
- * Value is `Call._id` hex; header name on SIP remains `KullooCallId`.
+ * Finds the Mongo call identifier Plivo or FreeSWITCH may expose under several header or query names.
+ * @param query Parsed query object from the Answer URL request.
+ * @param body Parsed body object when Plivo posts form fields.
+ * @returns A 24-character hexadecimal ObjectId string, or undefined when absent or invalid.
  */
 export function extractKullooCallIdFromSources(
   query: Record<string, unknown>,
@@ -42,6 +52,12 @@ export function extractKullooCallIdFromSources(
   return undefined;
 }
 
+/**
+ * Reads Plivo’s call UUID from query or body (used to correlate logs and optional warnings).
+ * @param query Parsed query object.
+ * @param body Parsed body object.
+ * @returns Plivo CallUUID when present, otherwise undefined.
+ */
 export function extractPlivoCallUuidFromSources(
   query: Record<string, unknown>,
   body: Record<string, unknown>,

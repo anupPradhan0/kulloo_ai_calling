@@ -1,6 +1,7 @@
 /**
- * Lightweight structured logging. In production, defaults to one JSON line per event
- * for easier searching in journals / log aggregators. Set LOG_FORMAT=pretty for human-readable.
+ * Writes structured log lines to the console with a configurable minimum level and JSON or pretty format.
+ * Production defaults to one JSON object per line so operators can grep or ship logs to aggregators; development can use prettier output.
+ * Call sites pass a short message key plus a metadata object rather than building strings by hand.
  */
 
 import { env } from "../config/env";
@@ -29,6 +30,11 @@ function useJsonLines(): boolean {
   return env.nodeEnv === "production";
 }
 
+/**
+ * Turns any thrown value into plain fields safe to embed in a log metadata object.
+ * @param err Unknown error from a catch block or callback.
+ * @returns A small record with name, message, and optional stack when the value is an Error.
+ */
 export function serializeError(err: unknown): Record<string, string | undefined> {
   if (err instanceof Error) {
     return {
@@ -77,6 +83,10 @@ function emit(level: LogLevel, msg: string, meta?: Record<string, unknown>): voi
   }
 }
 
+/**
+ * Application logger: four levels, each accepts a message key and optional structured metadata.
+ * The error helper flattens an optional err field into serializable properties on the log line.
+ */
 export const logger = {
   debug(msg: string, meta?: Record<string, unknown>): void {
     emit("debug", msg, meta);

@@ -1,6 +1,8 @@
 /**
- * Singleton ioredis client from `REDIS_URL`; startup `assertRedisAvailable` in `server.ts` gates the process.
+ * Owns a single shared Redis connection used for idempotency keys and webhook deduplication across the API process.
+ * Startup code calls assertRedisAvailable so the server exits early when Redis is required but unreachable.
  */
+
 import Redis from "ioredis";
 import { env, isRedisConfigured } from "../../config/env";
 import { logger } from "../../utils/logger";
@@ -8,7 +10,8 @@ import { logger } from "../../utils/logger";
 let client: Redis | null = null;
 
 /**
- * Returns the shared Redis client. Requires `REDIS_URL` and successful startup `assertRedisAvailable()`.
+ * Returns the lazily created singleton client; throws if REDIS_URL was never configured.
+ * @returns Connected or connecting ioredis instance shared by all Redis helpers.
  */
 export function getRedis(): Redis {
   if (!isRedisConfigured()) {
@@ -34,6 +37,10 @@ export function getRedis(): Redis {
   return client;
 }
 
+/**
+ * Sends PING and measures round-trip latency when Redis is configured; reports failure without throwing.
+ * @returns ok true when PING succeeds, plus latency; ok false with error message when misconfigured or down.
+ */
 export async function pingRedis(): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
   if (!isRedisConfigured()) {
     return { ok: false, error: "REDIS_URL is not set" };
@@ -51,7 +58,9 @@ export async function pingRedis(): Promise<{ ok: boolean; latencyMs?: number; er
   }
 }
 
-/** Fails fast if Redis is not configured or does not respond to PING. Call during bootstrap after Mongo. */
+/**
+ * Throws a clear error when Redis is missing or does not answer PING, so bootstrap stops before accepting calls.
+ */
 export async function assertRedisAvailable(): Promise<void> {
   if (!isRedisConfigured()) {
     const message =
@@ -68,6 +77,9 @@ export async function assertRedisAvailable(): Promise<void> {
   logger.info("bootstrap_redis_ok", { latencyMs: ping.latencyMs });
 }
 
+/**
+ * Closes the shared client on shutdown so the process can exit cleanly under orchestrators.
+ */
 export async function disconnectRedis(): Promise<void> {
   if (!client) {
     return;

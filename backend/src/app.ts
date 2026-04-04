@@ -1,6 +1,8 @@
 /**
- * Express application (no listen). Wires global middleware, Plivo XML routes on the root app, and `/api` JSON routes.
+ * Creates the Express application with security and parsing middleware, Plivo XML routes on the root app, and JSON API under /api.
+ * This module does not call listen; server.ts imports the app, starts background services, then binds the HTTP port.
  */
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -11,6 +13,7 @@ import { correlationIdMiddleware } from "./middlewares/correlation.middleware";
 import { registerPlivoWebhookRoutes } from "./modules/calls/routes/plivo.webhooks";
 import { env } from "./config/env";
 
+/** Fully configured Express instance (not yet listening on a port). */
 export const app = express();
 
 app.set("trust proxy", 1);

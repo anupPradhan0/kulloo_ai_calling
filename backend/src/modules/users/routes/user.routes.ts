@@ -1,4 +1,8 @@
-/** Standard CRUD routes for `User` under `/api/users`. */
+/**
+ * Registers REST endpoints for creating, listing, reading, updating, and deleting users under /api/users.
+ */
+
+/** Layer: routing only — connects HTTP paths and verbs to user controller exports. */
 import { Router } from "express";
 import { createUser, deleteUser, getUserById, getUsers, updateUser } from "../controllers/user.controller";
 

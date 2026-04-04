@@ -1,6 +1,9 @@
 /**
- * HTTP handlers for `/api/calls/*` and recording routes: validate, delegate to `CallService`, map errors to responses.
+ * Express handlers for call and recording routes: validate with Zod, call CallService, and use next(error) for centralized errors.
+ * Covers outbound hello, provider recording webhooks, Mongo-backed recording detail, and local WAV streaming from disk.
  */
+
+/** Layer: HTTP only — validate input, call CallService, send JSON or files; no Mongo or Redis here. */
 import { NextFunction, Request, Response } from "express";
 import path from "node:path";
 import { ApiError } from "../../../utils/api-error";
@@ -18,6 +21,9 @@ import { CallService } from "../services/call.service";
 
 const callService = new CallService();
 
+/**
+ * GET /api/recordings/local — JSON list of WAV files in the recordings directory with API-relative URLs.
+ */
 export async function listLocalRecordings(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const recordings = await callService.listLocalWavSummaries();
@@ -27,6 +33,9 @@ export async function listLocalRecordings(_req: Request, res: Response, next: Ne
   }
 }
 
+/**
+ * GET /api/recordings/local/:uuid — streams a WAV file from disk with audio headers set for inline playback.
+ */
 export async function localRecordingFile(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const uuid = req.params.uuid?.replace(/\.wav$/i, "");
@@ -39,6 +48,9 @@ export async function localRecordingFile(req: Request, res: Response, next: Next
   }
 }
 
+/**
+ * POST /api/calls/outbound/hello — requires Idempotency-Key header and runs the full outbound hello business flow.
+ */
 export async function outboundHelloCall(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const idempotencyKey = req.header("Idempotency-Key");
@@ -54,6 +66,9 @@ export async function outboundHelloCall(req: Request, res: Response, next: NextF
   }
 }
 
+/**
+ * GET /api/calls/:callId/recordings — returns recording metadata rows for one call.
+ */
 export async function listCallRecordings(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { callId } = parseWithSchema(callIdParamSchema, req.params);
@@ -64,6 +79,9 @@ export async function listCallRecordings(req: Request, res: Response, next: Next
   }
 }
 
+/**
+ * GET /api/recordings/:recordingId — returns one recording document from Mongo.
+ */
 export async function getRecording(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { recordingId } = parseWithSchema(recordingIdParamSchema, req.params);
@@ -74,6 +92,9 @@ export async function getRecording(req: Request, res: Response, next: NextFuncti
   }
 }
 
+/**
+ * GET /api/recordings/:recordingId/file — streams the file when filePath is stored on the recording document.
+ */
 export async function getRecordingFile(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { recordingId } = parseWithSchema(recordingIdParamSchema, req.params);
@@ -89,6 +110,9 @@ export async function getRecordingFile(req: Request, res: Response, next: NextFu
   }
 }
 
+/**
+ * POST Twilio recording webhook — responds with duplicate flag when Redis dedupe says the event was already handled.
+ */
 export async function twilioRecordingCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const payload = parseWithSchema(twilioRecordingCallbackSchema, req.body);
@@ -103,6 +127,9 @@ export async function twilioRecordingCallback(req: Request, res: Response, next:
   }
 }
 
+/**
+ * POST Plivo recording webhook — combines query callUuid with body fields after validation.
+ */
 export async function plivoRecordingCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { callUuid } = parseWithSchema(plivoRecordingCallbackQuerySchema, req.query);
@@ -118,6 +145,9 @@ export async function plivoRecordingCallback(req: Request, res: Response, next: 
   }
 }
 
+/**
+ * POST FreeSWITCH recording webhook — normalizes duration from string form when present, then delegates to the service.
+ */
 export async function freeswitchRecordingCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const payload = parseWithSchema(freeswitchRecordingCallbackSchema, req.body);

@@ -1,7 +1,9 @@
 /**
- * Single source of truth for configuration from the environment.
- * Import `env` from here; avoid reading `process.env` in services or controllers.
+ * Loads dotenv once and exposes every process environment variable the backend reads in one typed object.
+ * The rest of the codebase imports `env` from here so new settings are discovered in one place and tests can reason about configuration.
+ * Server startup refuses to continue without Redis when this module reports it as configured.
  */
+
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -18,6 +20,7 @@ function parseIntEnv(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+/** Parsed environment values used across HTTP, ESL, and background jobs. */
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? DEFAULT_PORT),
@@ -52,6 +55,9 @@ export const env = {
   recordingsSyncIntervalMs: Number(process.env.RECORDINGS_SYNC_INTERVAL_MS ?? 60000),
 };
 
+/**
+ * Returns whether REDIS_URL is set to a non-empty string (does not check connectivity).
+ */
 export function isRedisConfigured(): boolean {
   return Boolean(env.redisUrl && env.redisUrl.length > 0);
 }

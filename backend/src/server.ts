@@ -1,7 +1,9 @@
 /**
- * Process entry: MongoDB, Redis (required), ESL TCP listener, recovery timers, then HTTP.
- * FreeSWITCH connects *to* Kulloo on ESL_OUTBOUND_PORT (dialplan `socket` app); Kulloo does not dial FS first.
+ * Node process entry: connects MongoDB, verifies Redis, starts the FreeSWITCH Event Socket listener and recovery timers, then serves HTTP.
+ * Boot order matters because ESL and HTTP handlers assume the database and Redis clients are ready before accepting traffic.
+ * Graceful shutdown hooks disconnect Redis when the process receives SIGTERM or SIGINT.
  */
+
 import { app } from "./app";
 import { connectDatabase } from "./config/database";
 import { env } from "./config/env";
@@ -19,6 +21,11 @@ function shutdownRedis(): void {
 process.once("SIGTERM", shutdownRedis);
 process.once("SIGINT", shutdownRedis);
 
+/**
+ * Binds the HTTP server to the configured port, or tries the next ports when the address is already in use (local dev convenience).
+ * @param startPort First port to try from configuration.
+ * @param maxAttempts How many consecutive ports to try before failing.
+ */
 function listenWithPortFallback(startPort: number, maxAttempts = 10): Promise<void> {
   return new Promise((resolve, reject) => {
     const tryListen = (port: number, attemptsLeft: number): void => {
@@ -50,6 +57,10 @@ function listenWithPortFallback(startPort: number, maxAttempts = 10): Promise<vo
   });
 }
 
+/**
+ * Runs all startup side effects in order: database, Redis ping, ESL TCP server, orphan and recording sync jobs, then HTTP listen.
+ * Dynamic-imports the ESL handler so heavy telephony code loads after core configuration is validated.
+ */
 async function bootstrap(): Promise<void> {
   await connectDatabase();
   await assertRedisAvailable();

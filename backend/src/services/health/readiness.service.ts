@@ -1,7 +1,15 @@
-/** Non-HTTP readiness checks (Mongo ping, Redis ping) aggregated for `/api/health`. */
+/**
+ * Performs dependency health checks (MongoDB and Redis) that the HTTP readiness endpoint exposes as structured JSON.
+ * Separated from Express so the same checks could be reused from a CLI or test without starting the full app stack.
+ */
+
 import mongoose from "mongoose";
 import { pingRedis } from "../redis/redis.client";
 
+/**
+ * Runs a lightweight Mongo ping when the driver reports a connected state.
+ * @returns ok with latency when the admin command succeeds, or an error description when not connected or ping fails.
+ */
 export async function checkMongoPing(): Promise<{
   ok: boolean;
   latencyMs?: number;
@@ -31,6 +39,10 @@ export async function checkMongoPing(): Promise<{
   }
 }
 
+/**
+ * Aggregates Mongo and Redis ping results into the payload returned by GET /api/health.
+ * @returns ok false when either dependency fails; includes per-check detail and process uptime for operators.
+ */
 export async function getReadinessPayload(): Promise<{
   ok: boolean;
   status: string;

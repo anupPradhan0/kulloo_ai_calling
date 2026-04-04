@@ -1,6 +1,8 @@
 /**
- * REST routes for calls (outbound hello, callbacks, call recordings) and `/api/recordings/*` (local + Mongo-backed).
+ * Registers REST routes for outbound hello, provider recording callbacks, and recording file or metadata access.
  */
+
+/** Layer: routing only — maps paths to call controller handlers. */
 import { Router } from "express";
 import {
   getRecording,

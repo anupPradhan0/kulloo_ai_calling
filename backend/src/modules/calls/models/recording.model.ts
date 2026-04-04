@@ -1,3 +1,9 @@
+/**
+ * Mongoose model for per-call recording metadata: provider id, status, optional file path, and links for playback.
+ * One row can represent FreeSWITCH disk recordings or cloud provider recording ids depending on the media path.
+ */
+
+/** Layer: persistence shape only — recording fields and indexes; lifecycle rules live in CallService and ESL. */
 import { model, Schema, Types } from "mongoose";
 import { CallProvider } from "./call.model";
 
