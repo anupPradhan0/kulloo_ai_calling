@@ -10,7 +10,7 @@ This document describes **what FreeSWITCH does** in this project, **how the chec
 |--------|----------------|
 | **FreeSWITCH** | SIP termination, RTP/media, codec handling, executing the dialplan step that **hands the call to Kulloo** via the `socket` application. |
 | **Kulloo Node (ESL)** | Listens on **`ESL_OUTBOUND_PORT`** (default **3200**). Accepts the **outbound** Event Socket connection from FreeSWITCH, then runs the hello flow: answer → tone → record → DTMF → hangup, and persists `Call` / `CallEvent` / `Recording` in MongoDB. |
-| **MongoDB** | System of record for call state (see `doc/inbound-call-dataflow.md`, `doc/outbound-calls.md`). |
+| **MongoDB** | System of record for call state (see [inbound-call-dataflow.md](./inbound-call-dataflow.md), [outbound-calls.md](./outbound-calls.md)). |
 
 Recording WAV files are typically written to a directory shared with the backend (`RECORDINGS_DIR`), so the API can list and stream them.
 
@@ -159,8 +159,8 @@ Firewall rules must allow **SIP** (typically **5060** TCP/UDP), **RTP** (your `v
 | [esl.md](./esl.md) | What ESL is, outbound socket vs FS:8021, data flow |
 | [inbound-call-dataflow.md](./inbound-call-dataflow.md) | Inbound DID → Answer URL → FS → ESL → Mongo |
 | [outbound-calls.md](./outbound-calls.md) | Outbound API → Plivo → FS → ESL, `KullooCallId` |
-| [api.md](./api.md) | HTTP routes, callbacks |
-| [stability.md](./stability.md) | Idempotency, timeouts, recovery |
+| [api.md](../reference/api.md) | HTTP routes, callbacks |
+| *stability.md* (not in repo yet) | Idempotency, timeouts, recovery — see [Documentation index](../README.md) |
 
 **Backend:** `backend/src/server.ts` (ESL port), `backend/src/services/freeswitch/esl-call-handler.service.ts` (call flow).
 

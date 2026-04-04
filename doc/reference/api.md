@@ -6,7 +6,7 @@ All routes below are relative to the base URL.
 
 **Redis** (`REDIS_URL`) is **required**: the API exits on startup if it is missing or unreachable, and readiness always checks **`PING`**. See [redis.md](./redis.md).
 
-**ESL** (Event Socket: FreeSWITCH → Kulloo on `ESL_OUTBOUND_PORT`) drives the hello media flow; see [esl.md](./esl.md).
+**ESL** (Event Socket: FreeSWITCH → Kulloo on `ESL_OUTBOUND_PORT`) drives the hello media flow; see [esl.md](../telephony/esl.md).
 
 ## Health
 
@@ -30,7 +30,7 @@ All routes below are relative to the base URL.
 
 ## Calls
 
-Full outbound (Plivo → FreeSWITCH → ESL) architecture and data flow: see [outbound-calls.md](./outbound-calls.md).
+Full outbound (Plivo → FreeSWITCH → ESL) architecture and data flow: see [outbound-calls.md](../telephony/outbound-calls.md).
 
 - `POST /api/calls/outbound/hello`
   - Runs the outbound “hello” flow

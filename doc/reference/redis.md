@@ -36,14 +36,14 @@ Passwords and TLS are supported via standard Redis URLs (e.g. `rediss://` for TL
 
 | Path | Role |
 |------|------|
-| [`backend/src/config/env.ts`](../backend/src/config/env.ts) | Reads `REDIS_*` env; `isRedisConfigured()`. |
-| [`backend/src/services/redis/redis.client.ts`](../backend/src/services/redis/redis.client.ts) | Singleton **ioredis** client, `assertRedisAvailable()` (bootstrap), `pingRedis()`, `disconnectRedis()` (SIGTERM/SIGINT in `server.ts`). |
-| [`backend/src/services/redis/idempotency-cache.service.ts`](../backend/src/services/redis/idempotency-cache.service.ts) | SHA-256 of `Idempotency-Key` → key `…idempo:<hex>`; `GET` / `SET` with TTL. |
-| [`backend/src/services/redis/webhook-dedupe.service.ts`](../backend/src/services/redis/webhook-dedupe.service.ts) | `SET key 1 EX ttl NX` per webhook identity. |
-| [`backend/src/modules/calls/services/call.service.ts`](../backend/src/modules/calls/services/call.service.ts) | `runOutboundHelloFlow`: cache read before Mongo; `setCachedCallId…` after Mongo hit or after `create`. |
-| [`backend/src/modules/calls/controllers/call.controller.ts`](../backend/src/modules/calls/controllers/call.controller.ts) | Recording callbacks call `claimRecordingWebhookOnce` before ingestion. |
-| [`backend/src/modules/health/routes/health.routes.ts`](../backend/src/modules/health/routes/health.routes.ts) | Readiness includes Redis `PING` via readiness service. |
-| [`backend/src/services/observability/metrics.service.ts`](../backend/src/services/observability/metrics.service.ts) | `redisIdempotencyHits`, `redisIdempotencyMisses`, `webhookDedupeSkips`. |
+| [`backend/src/config/env.ts`](../../backend/src/config/env.ts) | Reads `REDIS_*` env; `isRedisConfigured()`. |
+| [`backend/src/services/redis/redis.client.ts`](../../backend/src/services/redis/redis.client.ts) | Singleton **ioredis** client, `assertRedisAvailable()` (bootstrap), `pingRedis()`, `disconnectRedis()` (SIGTERM/SIGINT in `server.ts`). |
+| [`backend/src/services/redis/idempotency-cache.service.ts`](../../backend/src/services/redis/idempotency-cache.service.ts) | SHA-256 of `Idempotency-Key` → key `…idempo:<hex>`; `GET` / `SET` with TTL. |
+| [`backend/src/services/redis/webhook-dedupe.service.ts`](../../backend/src/services/redis/webhook-dedupe.service.ts) | `SET key 1 EX ttl NX` per webhook identity. |
+| [`backend/src/modules/calls/services/call.service.ts`](../../backend/src/modules/calls/services/call.service.ts) | `runOutboundHelloFlow`: cache read before Mongo; `setCachedCallId…` after Mongo hit or after `create`. |
+| [`backend/src/modules/calls/controllers/call.controller.ts`](../../backend/src/modules/calls/controllers/call.controller.ts) | Recording callbacks call `claimRecordingWebhookOnce` before ingestion. |
+| [`backend/src/modules/health/routes/health.routes.ts`](../../backend/src/modules/health/routes/health.routes.ts) | Readiness includes Redis `PING` via readiness service. |
+| [`backend/src/services/observability/metrics.service.ts`](../../backend/src/services/observability/metrics.service.ts) | `redisIdempotencyHits`, `redisIdempotencyMisses`, `webhookDedupeSkips`. |
 
 ---
 
@@ -129,9 +129,9 @@ Duplicate responses are still **HTTP 200** so providers stop retrying; they are 
 
 | Compose file | Redis |
 |--------------|--------|
-| [`docker-compose.yml`](../docker-compose.yml) | `redis` service, host port **6379**. |
-| [`docker-compose.server.yml`](../docker-compose.server.yml) | `redis` + `REDIS_URL=redis://redis:6379` on `api`. |
-| [`docker-compose.redis.yml`](../docker-compose.redis.yml) | Redis-only stack for local use. |
+| [`docker-compose.yml`](../../docker-compose.yml) | `redis` service, host port **6379**. |
+| [`docker-compose.server.yml`](../../docker-compose.server.yml) | `redis` + `REDIS_URL=redis://redis:6379` on `api`. |
+| [`docker-compose.redis.yml`](../../docker-compose.redis.yml) | Redis-only stack for local use. |
 
 Use **`redis://localhost:6379`** from the host when Redis is bound on localhost (dev or compose port publish).
 

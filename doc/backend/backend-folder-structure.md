@@ -374,9 +374,9 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 ## Related documentation
 
-- [`api.md`](./api.md)
-- [`esl.md`](./esl.md), [`inbound-call-dataflow.md`](./inbound-call-dataflow.md), [`outbound-calls.md`](./outbound-calls.md)
-- [`redis.md`](./redis.md)
+- [`reference/api.md`](../reference/api.md)
+- [`telephony/esl.md`](../telephony/esl.md), [`telephony/inbound-call-dataflow.md`](../telephony/inbound-call-dataflow.md), [`telephony/outbound-calls.md`](../telephony/outbound-calls.md)
+- [`reference/redis.md`](../reference/redis.md)
 
 ---
 

@@ -29,7 +29,7 @@ In logs and docs, “**outbound ESL**” means: **FreeSWITCH → Kulloo** (TCP i
 ## 3. How Kulloo uses ESL
 
 1. **`server.ts`** starts **`EslCallHandlerService.listen()`** on **`ESL_OUTBOUND_PORT`** (env, default **3200**).
-2. FreeSWITCH dialplan hits an extension (e.g. destination `1000` or `hello`) and runs **`socket host:port async full`** (see [`freeswitch/conf/dialplan/hello.xml`](../freeswitch/conf/dialplan/hello.xml)).
+2. FreeSWITCH dialplan hits an extension (e.g. destination `1000` or `hello`) and runs **`socket host:port async full`** (see [`freeswitch/conf/dialplan/hello.xml`](../../freeswitch/conf/dialplan/hello.xml)).
 3. For each new call, FreeSWITCH opens **one TCP connection** to Kulloo; **`esl-call-handler.service.ts`** handles it end-to-end.
 4. The handler:
    - Parses **channel UUID**, **caller/callee** (headers and `getvar` fallbacks).
@@ -98,7 +98,7 @@ If **`KullooCallId` is missing** (pure inbound DID), ESL creates an **inbound** 
 
 ## 6. What the hello ESL flow does (summary)
 
-Rough order inside **`executeCallFlow`** (see [`esl-call-handler.service.ts`](../backend/src/services/freeswitch/esl-call-handler.service.ts)):
+Rough order inside **`executeCallFlow`** (see [`esl-call-handler.service.ts`](../../backend/src/services/freeswitch/esl-call-handler.service.ts)):
 
 1. Resolve/create **`Call`** and emit **`received`** when new.
 2. **`answer`**
@@ -139,10 +139,10 @@ Firewall: allow **TCP** from the FreeSWITCH host to **`ESL_OUTBOUND_PORT`** on t
 
 | Topic | Path |
 |--------|------|
-| ESL TCP server + call flow | [`backend/src/services/freeswitch/esl-call-handler.service.ts`](../backend/src/services/freeswitch/esl-call-handler.service.ts) |
-| Process bootstrap (ESL + HTTP) | [`backend/src/server.ts`](../backend/src/server.ts) |
-| Call / event / recording persistence | [`backend/src/modules/calls/services/call.service.ts`](../backend/src/modules/calls/services/call.service.ts) |
-| FreeSWITCH `socket` dialplan | [`freeswitch/conf/dialplan/hello.xml`](../freeswitch/conf/dialplan/hello.xml) |
+| ESL TCP server + call flow | [`backend/src/services/freeswitch/esl-call-handler.service.ts`](../../backend/src/services/freeswitch/esl-call-handler.service.ts) |
+| Process bootstrap (ESL + HTTP) | [`backend/src/server.ts`](../../backend/src/server.ts) |
+| Call / event / recording persistence | [`backend/src/modules/calls/services/call.service.ts`](../../backend/src/modules/calls/services/call.service.ts) |
+| FreeSWITCH `socket` dialplan | [`freeswitch/conf/dialplan/hello.xml`](../../freeswitch/conf/dialplan/hello.xml) |
 
 ---
 
@@ -151,7 +151,7 @@ Firewall: allow **TCP** from the FreeSWITCH host to **`ESL_OUTBOUND_PORT`** on t
 - [`freeswitch.md`](./freeswitch.md) — FreeSWITCH config, `socket` vs ESL port 8021, Docker.
 - [`inbound-call-dataflow.md`](./inbound-call-dataflow.md) — Inbound DID → Answer URL → FS → ESL.
 - [`outbound-calls.md`](./outbound-calls.md) — Outbound API, Plivo, `KullooCallId`, ESL attach.
-- [`hello-call-contract.md`](./hello-call-contract.md) — Hello contract and acceptance notes.
+- [`hello-call-contract.md`](../product/hello-call-contract.md) — Hello contract and acceptance notes.
 
 ---
 
