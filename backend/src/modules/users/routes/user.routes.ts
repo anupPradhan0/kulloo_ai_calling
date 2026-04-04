@@ -1,3 +1,4 @@
+/** Standard CRUD routes for `User` under `/api/users`. */
 import { Router } from "express";
 import { createUser, deleteUser, getUserById, getUsers, updateUser } from "../controllers/user.controller";
 

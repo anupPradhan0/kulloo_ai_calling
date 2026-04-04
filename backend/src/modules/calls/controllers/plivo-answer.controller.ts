@@ -1,3 +1,6 @@
+/**
+ * Plivo Answer URL: returns XML to `<Dial>` into FreeSWITCH, forwarding `KullooCallId` when present.
+ */
 import { Request, Response } from "express";
 import { env } from "../../../config/env";
 import { logger } from "../../../utils/logger";

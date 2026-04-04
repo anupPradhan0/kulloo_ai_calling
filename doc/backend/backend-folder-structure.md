@@ -19,7 +19,7 @@ Paths are relative to **`backend/`** unless noted.
 | **`backend/`** | Root of the Node/Express API package. |
 | **`node_modules/`** | pnpm-installed dependencies. Created by `pnpm install`. Do not edit by hand; not enumerated file-by-file in this doc. |
 | **`scripts/`** | Standalone TypeScript scripts (e.g. hello-call soak tests). |
-| **`src/`** | Application source code. |
+| **`src/`** | Application source code. High-level map (HTTP vs ESL, conventions): **`src/README.md`**. |
 
 ---
 

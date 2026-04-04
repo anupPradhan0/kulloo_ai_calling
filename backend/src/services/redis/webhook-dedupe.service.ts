@@ -1,3 +1,4 @@
+/** `SET … NX` keys so recording provider callbacks are processed at most once per logical event. */
 import { env } from "../../config/env";
 import { getRedis } from "./redis.client";
 

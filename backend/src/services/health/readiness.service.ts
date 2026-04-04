@@ -1,3 +1,4 @@
+/** Non-HTTP readiness checks (Mongo ping, Redis ping) aggregated for `/api/health`. */
 import mongoose from "mongoose";
 import { pingRedis } from "../redis/redis.client";
 

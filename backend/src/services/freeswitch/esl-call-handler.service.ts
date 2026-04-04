@@ -1,3 +1,7 @@
+/**
+ * Outbound ESL from FreeSWITCH’s perspective: FS opens a TCP connection to this Node `modesl` server per channel.
+ * Runs the hello flow (answer, playback, record_session, DTMF, hangup) and persists via `CallService`.
+ */
 import { Server as EslServer, Connection } from "modesl";
 import { CallService } from "../../modules/calls/services/call.service";
 import type { CallDocument } from "../../modules/calls/models/call.model";

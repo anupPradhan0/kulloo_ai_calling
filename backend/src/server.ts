@@ -1,3 +1,7 @@
+/**
+ * Process entry: MongoDB, Redis (required), ESL TCP listener, recovery timers, then HTTP.
+ * FreeSWITCH connects *to* Kulloo on ESL_OUTBOUND_PORT (dialplan `socket` app); Kulloo does not dial FS first.
+ */
 import { app } from "./app";
 import { connectDatabase } from "./config/database";
 import { env } from "./config/env";

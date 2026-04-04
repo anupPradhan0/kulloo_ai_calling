@@ -1,3 +1,4 @@
+/** Redis cache for `Idempotency-Key` on `POST /api/calls/outbound/hello` (TTL-backed; Mongo unique index is the backstop). */
 import { createHash } from "node:crypto";
 import { Types } from "mongoose";
 import { env } from "../../config/env";

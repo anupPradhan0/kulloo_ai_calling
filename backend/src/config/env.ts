@@ -1,3 +1,7 @@
+/**
+ * Single source of truth for configuration from the environment.
+ * Import `env` from here; avoid reading `process.env` in services or controllers.
+ */
 import dotenv from "dotenv";
 
 dotenv.config();

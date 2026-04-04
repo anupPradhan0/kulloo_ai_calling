@@ -1,3 +1,6 @@
+/**
+ * Express application (no listen). Wires global middleware, Plivo XML routes on the root app, and `/api` JSON routes.
+ */
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";

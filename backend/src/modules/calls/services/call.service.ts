@@ -1,3 +1,7 @@
+/**
+ * Call domain orchestration: outbound hello (idempotency + Plivo), recording webhooks, and helpers used by ESL.
+ * Talks to Mongo through repositories and to carriers through `TelephonyAdapter`; Redis via dedicated services.
+ */
 import { randomUUID } from "node:crypto";
 import { Types } from "mongoose";
 import { ApiError } from "../../../utils/api-error";

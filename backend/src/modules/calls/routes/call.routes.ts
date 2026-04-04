@@ -1,3 +1,6 @@
+/**
+ * REST routes for calls (outbound hello, callbacks, call recordings) and `/api/recordings/*` (local + Mongo-backed).
+ */
 import { Router } from "express";
 import {
   getRecording,

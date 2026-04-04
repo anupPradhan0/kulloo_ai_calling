@@ -1,3 +1,6 @@
+/**
+ * JSON API under `/api`. Plivo Answer/Hangup XML is mounted separately on the root app in `app.ts`.
+ */
 import { Router } from "express";
 import { healthRouter } from "../modules/health/routes/health.routes";
 import { metricsRouter } from "./metrics.routes";

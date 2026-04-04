@@ -1,3 +1,6 @@
+/**
+ * Periodically marks stale non-terminal calls as failed after process restarts (coordinates with active ESL channels).
+ */
 import { CallRepository } from "../../modules/calls/repositories/call.repository";
 import { logger } from "../../utils/logger";
 

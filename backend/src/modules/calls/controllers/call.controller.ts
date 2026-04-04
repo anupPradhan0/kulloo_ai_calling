@@ -1,3 +1,6 @@
+/**
+ * HTTP handlers for `/api/calls/*` and recording routes: validate, delegate to `CallService`, map errors to responses.
+ */
 import { NextFunction, Request, Response } from "express";
 import path from "node:path";
 import { ApiError } from "../../../utils/api-error";

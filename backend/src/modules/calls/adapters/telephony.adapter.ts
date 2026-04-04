@@ -1,3 +1,6 @@
+/**
+ * Outbound dial execution: Plivo/Twilio (and similar) SDK calls; keeps provider SDKs out of `CallService`.
+ */
 import { env } from "../../../config/env";
 import { ApiError } from "../../../utils/api-error";
 import { CallProvider } from "../models/call.model";

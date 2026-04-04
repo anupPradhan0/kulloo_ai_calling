@@ -1,3 +1,6 @@
+/**
+ * Singleton ioredis client from `REDIS_URL`; startup `assertRedisAvailable` in `server.ts` gates the process.
+ */
 import Redis from "ioredis";
 import { env, isRedisConfigured } from "../../config/env";
 import { logger } from "../../utils/logger";

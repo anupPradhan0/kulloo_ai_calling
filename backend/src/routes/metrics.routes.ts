@@ -1,3 +1,4 @@
+/** Snapshot of in-process counters (ESL, Redis idempotency, webhooks, etc.). */
 import { Router } from "express";
 import { metrics } from "../services/observability/metrics.service";
 

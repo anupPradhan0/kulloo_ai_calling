@@ -1,3 +1,4 @@
+/** `/api/health/live` and `/api/health` readiness (Mongo + Redis via readiness service). */
 import { Request, Response } from "express";
 import { getReadinessPayload } from "../../../services/health/readiness.service";
 

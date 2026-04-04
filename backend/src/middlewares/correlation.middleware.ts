@@ -1,3 +1,4 @@
+/** Sets `req.correlationId` (header or new UUID) for logging across HTTP and related ESL logs. */
 import { NextFunction, Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 

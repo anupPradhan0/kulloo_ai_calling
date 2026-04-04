@@ -1,3 +1,4 @@
+/** CRUD HTTP for users; thin wrappers around `UserService`. */
 import { NextFunction, Request, Response } from "express";
 import { UserService } from "../services/user.service";
 import { parseWithSchema } from "../../../utils/zod-validate";

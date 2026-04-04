@@ -1,3 +1,4 @@
+/** Process-local counters and active-call gauge; ESL and HTTP increment via `metrics` singleton. */
 export type CounterName =
   | "failedCalls"
   | "recordingFailed"

@@ -1,3 +1,4 @@
+/** Mongoose connection with retries (used from `server.ts` before ESL/HTTP). */
 import mongoose from "mongoose";
 import { env } from "./env";
 

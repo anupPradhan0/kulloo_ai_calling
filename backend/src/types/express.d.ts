@@ -1,3 +1,4 @@
+/** Extends Express `Request` with `correlationId` (set in `correlation.middleware.ts`). */
 declare global {
   namespace Express {
     interface Request {

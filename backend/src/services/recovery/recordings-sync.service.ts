@@ -1,3 +1,6 @@
+/**
+ * Scans `RECORDINGS_DIR` for WAVs and upserts `Recording` rows in Mongo (backfill / drift correction).
+ */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CallRepository } from "../../modules/calls/repositories/call.repository";

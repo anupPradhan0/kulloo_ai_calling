@@ -1,3 +1,4 @@
+/** Last-chance Express error handler and 404 → `ApiError`; logs with `correlationId` when present. */
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../utils/api-error";
 import { logger } from "../utils/logger";
