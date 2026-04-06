@@ -11,3 +11,7 @@ NIXPACKS_NODE_VERSION = "22"
 
 # Custom out dir (only if you change vite.config `build.outDir`):
 # NIXPACKS_SPA_OUT_DIR = "dist"
+
+# Friendly startup banner + port / URL (then Caddy’s own logs).
+[start]
+cmd = "sh /app/scripts/nixpacks-start.sh"

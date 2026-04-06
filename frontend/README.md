@@ -51,7 +51,11 @@ Nginx config is built at container start from `docker/nginx/default.conf.in` (pl
 2. **Build environment:** set `VITE_API_BASE_URL=https://kulloocall.anuppradhan.in` (no trailing slash) so production bundles call your API.
 3. **Node version:** [`nixpacks.toml`](nixpacks.toml) sets `NIXPACKS_NODE_VERSION = "22"` (Vite 8 does not run on Node 18). If the build still uses 18, add `NIXPACKS_NODE_VERSION=22` in the service **environment** for the build step.
 
-After deploy, point your public domain (e.g. `app.anuppradhan.in`) at the **container port** your platform assigns for Caddy (often **80** or the value shown in the service — **not** Vite’s 5173).
+After deploy, point your public domain (e.g. `app.anuppradhan.in`) at the **container port** your platform assigns for Caddy (often **`PORT`** from the platform, sometimes **80** — **not** Vite’s 5173).
+
+**Runtime logs:** [`scripts/nixpacks-start.sh`](scripts/nixpacks-start.sh) prints a short **Kulloo** banner (listen port, optional `PUBLIC_URL` hint), then Caddy runs. Lines like `{"level":"info",...}` after that are **normal Caddy JSON logs**, not errors.
+
+Optional env on the running service: **`PUBLIC_URL=https://app.anuppradhan.in`** so the banner shows your real URL.
 
 ```bash
 docker run --rm -p 8080:80 kulloo-frontend
