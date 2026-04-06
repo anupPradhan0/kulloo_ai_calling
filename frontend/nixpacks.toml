@@ -1,0 +1,5 @@
+# Nixpacks (Dokploy / Railway-style). Vite 8 needs Node 20.19+ or 22.12+ — not Node 18.
+# https://nixpacks.com/docs/configuration/file
+
+[variables]
+NIXPACKS_NODE_VERSION = "22"

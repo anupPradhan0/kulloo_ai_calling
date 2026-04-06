@@ -45,6 +45,10 @@ docker build -f frontend/Dockerfile --build-arg SRC_PREFIX=frontend/ --target pr
 
 Nginx config is built at container start from `docker/nginx/default.conf.in` (placeholder `__API_UPSTREAM__`) so normal `$uri` / `$host` are not broken by image `envsubst`.
 
+## Nixpacks (Dokploy buildpack)
+
+**Vite 8 requires Node 20.19+** (not 18). This repo pins Node **22** via [`nixpacks.toml`](nixpacks.toml) (`NIXPACKS_NODE_VERSION`). If your host ignores it, set the same variable in the service **Environment** for the build.
+
 ```bash
 docker run --rm -p 8080:80 kulloo-frontend
 ```
