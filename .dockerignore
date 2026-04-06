@@ -1,5 +1,4 @@
-# Used when building with repo root as context, e.g.:
-# docker build -f frontend/Dockerfile --target production .
+# Optional: Docker build context from repo root (e.g. backend image).
 .git
 **/.git
 **/node_modules
