@@ -45,9 +45,13 @@ docker build -f frontend/Dockerfile --build-arg SRC_PREFIX=frontend/ --target pr
 
 Nginx config is built at container start from `docker/nginx/default.conf.in` (placeholder `__API_UPSTREAM__`) so normal `$uri` / `$host` are not broken by image `envsubst`.
 
-## Nixpacks (Dokploy buildpack)
+## Deploy with Nixpacks (recommended on Dokploy if you use a buildpack)
 
-**Vite 8 requires Node 20.19+** (not 18). This repo pins Node **22** via [`nixpacks.toml`](nixpacks.toml) (`NIXPACKS_NODE_VERSION`). If your host ignores it, set the same variable in the service **Environment** for the build.
+1. **Repository / context:** use the `frontend/` directory as the app root (or the repo root with build path set to `frontend`, depending on your panel).
+2. **Build environment:** set `VITE_API_BASE_URL=https://kulloocall.anuppradhan.in` (no trailing slash) so production bundles call your API.
+3. **Node version:** [`nixpacks.toml`](nixpacks.toml) sets `NIXPACKS_NODE_VERSION = "22"` (Vite 8 does not run on Node 18). If the build still uses 18, add `NIXPACKS_NODE_VERSION=22` in the service **environment** for the build step.
+
+After deploy, point your public domain (e.g. `app.anuppradhan.in`) at the **container port** your platform assigns for Caddy (often **80** or the value shown in the service — **not** Vite’s 5173).
 
 ```bash
 docker run --rm -p 8080:80 kulloo-frontend
