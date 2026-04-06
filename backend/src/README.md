@@ -5,7 +5,7 @@ Runtime source for the Kulloo API. **Narrative docs:** [`../../doc/README.md`](.
 ## HTTP request path
 
 1. **`app.ts`** — Builds the Express app: middleware, **correlation id**, **Plivo Answer/Hangup on the app root** (not only `/api`), then **`/api` → `routes/index.ts`**.
-2. **`routes/index.ts`** — Mounts `/api/health`, `/api/metrics`, `/api/users`, `/api/calls`, `/api/recordings`.
+2. **`routes/index.ts`** — Mounts `/api/health`, `/api/metrics`, `/api/calls`, `/api/recordings`.
 3. **`modules/<feature>/routes/*.ts`** — Maps paths to controller functions.
 4. **`modules/<feature>/controllers/*.ts`** — Validates input (often Zod), calls **services**, sends JSON. **No direct Mongoose calls.**
 5. **`modules/<feature>/services/*.ts`** — Business rules and orchestration; calls **repositories** and **adapters**.

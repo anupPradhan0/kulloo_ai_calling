@@ -17,19 +17,6 @@ All routes below are relative to the base URL.
 - `GET /api/health`
   - Readiness probe (Mongo ping + Redis `PING`)
 
-## Users
-
-- `POST /api/users`
-  - Create user
-- `GET /api/users`
-  - List users
-- `GET /api/users/:id`
-  - Get user by id
-- `PATCH /api/users/:id`
-  - Update user
-- `DELETE /api/users/:id`
-  - Delete user
-
 ## Calls
 
 Full outbound (Plivo → FreeSWITCH → ESL) architecture and data flow: see [outbound-calls.md](../telephony/outbound-calls.md).

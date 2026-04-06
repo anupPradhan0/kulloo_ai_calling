@@ -70,7 +70,7 @@ In the markdown files below this README, **relative links** are from each fileâ€
 
 | Document | Description |
 |----------|-------------|
-| [reference/api.md](reference/api.md) | HTTP routes overview (health, users, calls, callbacks, recordings). |
+| [reference/api.md](reference/api.md) | HTTP routes overview (health, calls, callbacks, recordings). |
 | [reference/redis.md](reference/redis.md) | Redis keys, TTLs, idempotency cache, webhook dedupe, health. |
 
 ---

@@ -117,32 +117,17 @@ backend/
     │   │   │   └── call.service.ts
     │   │   └── validators/
     │   │       └── call.schema.ts
-    │   ├── health/
-    │   │   ├── controllers/
-    │   │   │   └── health.controller.ts
-    │   │   └── routes/
-    │   │       └── health.routes.ts
-    │   └── users/
+    │   └── health/
     │       ├── controllers/
-    │       │   └── user.controller.ts
-    │       ├── models/
-    │       │   └── user.model.ts
-    │       ├── repositories/
-    │       │   └── user.repository.ts
-    │       ├── routes/
-    │       │   └── user.routes.ts
-    │       ├── services/
-    │       │   └── user.service.ts
-    │       └── validators/
-    │           └── user.schema.ts
+    │       │   └── health.controller.ts
+    │       └── routes/
+    │           └── health.routes.ts
     ├── routes/
     │   ├── index.ts
     │   └── metrics.routes.ts
     ├── services/
     │   ├── freeswitch/
-    │   │   ├── call-control.service.ts
-    │   │   ├── esl-call-handler.service.ts
-    │   │   └── freeswitch-mrf.service.ts
+    │   │   └── esl-call-handler.service.ts
     │   ├── health/
     │   │   └── readiness.service.ts
     │   ├── observability/
@@ -176,7 +161,7 @@ backend/
 
 ## 4. Complete file inventory (every project file, excluding `node_modules/**`)
 
-Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' | sort`. **55** files total: **1** script, **46** under `src/**/*.ts`, **8** root project files.
+Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' | sort`. **48** files total: **1** script, **38** `.ts` files under `src/`, **`src/README.md`**, **8** root project files.
 
 | Path |
 |------|
@@ -208,18 +193,11 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | `src/modules/calls/validators/call.schema.ts` |
 | `src/modules/health/controllers/health.controller.ts` |
 | `src/modules/health/routes/health.routes.ts` |
-| `src/modules/users/controllers/user.controller.ts` |
-| `src/modules/users/models/user.model.ts` |
-| `src/modules/users/repositories/user.repository.ts` |
-| `src/modules/users/routes/user.routes.ts` |
-| `src/modules/users/services/user.service.ts` |
-| `src/modules/users/validators/user.schema.ts` |
+| `src/README.md` |
 | `src/routes/index.ts` |
 | `src/routes/metrics.routes.ts` |
 | `src/server.ts` |
-| `src/services/freeswitch/call-control.service.ts` |
 | `src/services/freeswitch/esl-call-handler.service.ts` |
-| `src/services/freeswitch/freeswitch-mrf.service.ts` |
 | `src/services/health/readiness.service.ts` |
 | `src/services/observability/metrics.service.ts` |
 | `src/services/recovery/orphan-calls-recovery.service.ts` |
@@ -283,7 +261,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 | File | Purpose |
 |------|---------|
-| **`index.ts`** | Mounts `/health`, `/metrics`, `/users`, `/calls`, `/recordings`; imports **`healthRouter`** from **`modules/health`**, **`userRouter`** from **`modules/users`**. |
+| **`index.ts`** | Mounts `/health`, `/metrics`, `/calls`, `/recordings`; imports **`healthRouter`** from **`modules/health`**, **`callRouter`** and **`recordingRouter`** from **`modules/calls`**. |
 | **`metrics.routes.ts`** | `GET /api/metrics` → **`metrics.snapshot()`**. |
 
 ---
@@ -305,20 +283,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 ---
 
-## 12. `src/modules/users/`
-
-| Path | Purpose |
-|------|---------|
-| **`routes/user.routes.ts`** | User REST routes → `controllers/user.controller`. |
-| **`controllers/user.controller.ts`** | User HTTP handlers. |
-| **`services/user.service.ts`** | User business logic. |
-| **`models/user.model.ts`** | User Mongoose model. |
-| **`repositories/user.repository.ts`** | User persistence. |
-| **`validators/user.schema.ts`** | User request validation (Zod). |
-
----
-
-## 13. `src/modules/calls/`
+## 12. `src/modules/calls/`
 
 | Path | Purpose |
 |------|---------|
@@ -334,20 +299,18 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 ---
 
-## 14. `src/services/` (shared infrastructure)
+## 13. `src/services/` (shared infrastructure)
 
 | Path | Purpose |
 |------|---------|
 | **`freeswitch/esl-call-handler.service.ts`** | Outbound ESL TCP server; hello media flow; persists via **`CallService`** (no direct repository access from ESL). |
-| **`freeswitch/call-control.service.ts`** | Drachtio-fsmrf endpoint helpers. |
-| **`freeswitch/freeswitch-mrf.service.ts`** | MRF / `MediaServer` connection helper. |
 | **`redis/*`** | ioredis client, idempotency cache, webhook dedupe. |
 | **`recovery/*`** | Orphan call sweep and recordings disk ↔ Mongo sync (use **`CallRepository`** / **`RecordingRepository`**). |
 | **`observability/metrics.service.ts`** | In-process metrics for `/api/metrics`. |
 
 ---
 
-## 15. `src/middlewares/`, `src/utils/`, `src/types/`
+## 14. `src/middlewares/`, `src/utils/`, `src/types/`
 
 | Path | Purpose |
 |------|---------|
@@ -363,7 +326,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 ---
 
-## 16. How pieces connect (quick reference)
+## 15. How pieces connect (quick reference)
 
 1. **HTTP** — `server.ts` → `app.ts` → `routes/index.ts` → feature routers → controllers → services → repositories → models.
 2. **Plivo Answer (XML)** — `app.ts` → **`registerPlivoWebhookRoutes`** → **`plivo-answer.controller`** (uses **`env.freeswitchSipUri`**, **`utils/plivo-payload`**).
