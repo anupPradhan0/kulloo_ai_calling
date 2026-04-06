@@ -15,7 +15,8 @@ COPY src ./src
 RUN pnpm run build
 
 # Serve with nginx; proxy /api to the Kulloo backend (override API_UPSTREAM at runtime)
-FROM nginx:1.27-alpine
+# Dokploy / CI often use: docker build --target production
+FROM nginx:1.27-alpine AS production
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template
