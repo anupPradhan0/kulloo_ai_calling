@@ -25,14 +25,27 @@ pnpm preview  # serve production build locally
 
 Build and run the image (serves the static app on port **80**). Nginx proxies **`/api`** to the backend; default upstream is **`http://api:5000`** (use the same service name in Docker Compose as your API container).
 
-From the **repo root** (recommended for Dokploy):
+The Dockerfile supports **two** setups:
+
+**A — Build context is `frontend/`** (typical Dokploy: context = `./frontend` or the frontend directory, Dockerfile = `Dockerfile`):
 
 ```bash
-docker build -f frontend/Dockerfile --target production -t kulloo-frontend .
-docker run --rm -p 8080:80 kulloo-frontend
+cd frontend && docker build --target production -t kulloo-frontend .
 ```
 
-From **`frontend/`** only if you change Dockerfile `COPY` paths back to non-prefixed names.
+Do **not** set `SRC_PREFIX` (leave unset or empty).
+
+**B — Build context is the repo root:**
+
+```bash
+docker build -f frontend/Dockerfile --build-arg SRC_PREFIX=frontend/ --target production -t kulloo-frontend .
+```
+
+`SRC_PREFIX` must include the trailing slash (`frontend/`).
+
+```bash
+docker run --rm -p 8080:80 kulloo-frontend
+```
 
 Point the browser at `http://localhost:8080`. If the API runs elsewhere, set **`API_UPSTREAM`** (full URL including scheme, no path):
 
