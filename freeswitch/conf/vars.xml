@@ -7,5 +7,6 @@
   <X-PRE-PROCESS cmd="set" data="global_codec_prefs=OPUS,PCMU,PCMA"/>
   <X-PRE-PROCESS cmd="set" data="outbound_codec_prefs=OPUS,PCMU,PCMA"/>
   <X-PRE-PROCESS cmd="set" data="rtp_start_port=16384"/>
-  <X-PRE-PROCESS cmd="set" data="rtp_end_port=16484"/>
+  <!-- ~16k UDP ports for RTP; align Docker publishes and host firewall with this range. -->
+  <X-PRE-PROCESS cmd="set" data="rtp_end_port=32768"/>
 </include>

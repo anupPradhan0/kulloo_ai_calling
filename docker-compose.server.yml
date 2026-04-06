@@ -84,7 +84,7 @@ services:
       - "8022:8021/tcp"
       - "5060:5060/udp"
       - "5060:5060/tcp"
-      - "16384-16484:16384-16484/udp"
+      - "16384-32768:16384-32768/udp"
     volumes:
       - ./freeswitch/conf:/etc/freeswitch
       - recordings_data:/recordings

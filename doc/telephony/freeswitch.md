@@ -67,7 +67,7 @@ A bundle of related settings:
 - **`domain`** — Derived from `external_sip_ip`.
 - **`kulloo_recording_webhook_url`** — Optional global variable for a Kulloo HTTP callback endpoint. The hello flow **records and finalizes metadata in Node** (`esl-call-handler.service.ts`); this variable is available if you add dialplan or other FS-side integrations that POST completion to the API.
 - **Codecs** — `OPUS,PCMU,PCMA` preferences.
-- **RTP range** — `16384`–`16484` (align firewall rules with your deployment).
+- **RTP range** — `16384`–`32768` (align Docker UDP publishes and host firewall with this range).
 
 ---
 

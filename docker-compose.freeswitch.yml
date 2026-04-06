@@ -5,7 +5,7 @@
 #   Root directory: repository root (where freeswitch/ and recordings/ live)
 #
 # UFW / Hostinger firewall must allow:
-#   TCP+UDP 5060, UDP 16384-16484, TCP 22 / 80 / 443
+#   TCP+UDP 5060, UDP 16384-32768, TCP 22 / 80 / 443
 
 services:
   freeswitch:
@@ -19,12 +19,12 @@ services:
       --ext-sip-ip 148.135.138.190
       --ext-rtp-ip 148.135.138.190
       --rtp-range-start 16384
-      --rtp-range-end 16484
+      --rtp-range-end 32768
     ports:
       - "8021:8021/tcp"
       - "5060:5080/udp"
       - "5060:5080/tcp"
-      - "16384-16484:16384-16484/udp"
+      - "16384-32768:16384-32768/udp"
     volumes:
       # Mount our hello dialplan as mrf.xml so FreeSWITCH loads it
       - ./freeswitch/conf/dialplan/hello.xml:/usr/local/freeswitch/conf/dialplan/mrf.xml
