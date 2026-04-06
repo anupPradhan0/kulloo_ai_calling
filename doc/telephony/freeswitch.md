@@ -57,7 +57,7 @@ A bundle of related settings:
 
 2. **Inbound ESL server (`event_socket.conf` embedded)** — FreeSWITCH listens on **`0.0.0.0:8021`** with password **`ClueCon`**. This is the **classic** pattern: a **client** connects **to** FreeSWITCH on port **8021**. It is **separate** from the dialplan **`socket`** app, which makes FreeSWITCH connect **out** to Kulloo on port **3200**.
 
-3. **Sofia SIP (`internal` profile)** — Binds SIP (typically port **5060**), sets RTP-related external IP from `vars.xml`, and **`auth-calls=false`** so unauthenticated inbound INVITEs (e.g. from a carrier bridge) can be accepted. The profile references a dialplan **context** (see §5 for `mrf` vs `public`).
+3. **Sofia SIP (`internal` profile)** — Binds SIP (port **5070**), sets RTP-related external IP from `vars.fsN.xml`, and **`auth-calls=false`** so unauthenticated inbound INVITEs (e.g. from Kamailio) can be accepted. The profile references the **`mrf`** dialplan context.
 
 4. **Dialplan** — Includes `dialplan/hello.xml` so the `hello-call` extension is loaded.
 
@@ -67,7 +67,7 @@ A bundle of related settings:
 - **`domain`** — Derived from `external_sip_ip`.
 - **`kulloo_recording_webhook_url`** — Optional global variable for a Kulloo HTTP callback endpoint. The hello flow **records and finalizes metadata in Node** (`esl-call-handler.service.ts`); this variable is available if you add dialplan or other FS-side integrations that POST completion to the API.
 - **Codecs** — `OPUS,PCMU,PCMA` preferences.
-- **RTP range** — `16384`–`32768` (align Docker UDP publishes and host firewall with this range).
+- **RTP range** — `16384`–`17383` (fs1 defaults, 500 concurrent streams). Overridden per instance via `vars.fs1.xml`, `vars.fs2.xml`, etc.
 
 ---
 
@@ -85,13 +85,9 @@ The production hello flow documented in this repo is centered on the second row:
 ## 5. Dialplan context: `mrf` and Sofia
 
 - `hello.xml` defines extensions under **`context name="mrf"`**.
-- The sample `internal` Sofia profile in `freeswitch.xml` sets **`context` to `public`**.
+- The `internal` Sofia profile in `freeswitch.xml` is explicitly set to **`context="mrf"`**.
 
-For the **`hello-call`** extension to run, the **incoming call must enter the `mrf` context** (or you need a matching extension in the context Sofia actually uses). In deployments, either:
-
-- Set the Sofia profile **`context`** to **`mrf`**, or  
-- Add routing in **`public`** (or the context you use) that sends `1000` / `hello` into **`mrf`**, or  
-- Rely on image-specific defaults (some images merge `mrf.xml` from the container layout).
+For the **`hello-call`** extension to run, the incoming call must enter the `mrf` context. If this was left as `public` (a common default), Kamailio's INVITEs would fall through to the operator and never trigger the `socket` to run the hello flow.
 
 After changing context, place a test call and confirm in FS logs that the **`hello-call`** extension runs before debugging ESL.
 
@@ -136,10 +132,10 @@ Paths differ by compose file:
 
 | File | How FreeSWITCH config is supplied |
 |------|-------------------------------------|
-| **`docker-compose.freeswitch.yml`** | Mounts **`hello.xml`** into the image as **`mrf.xml`** under `/usr/local/freeswitch/conf/dialplan/`. Uses image `freeswitch` command flags for external SIP/RTP IP and RTP range. |
-| **`docker-compose.yml`** | Mounts **`./freeswitch/conf`** to **`/etc/freeswitch`** for the whole tree (local dev style). |
+| **`docker-compose.server.yml`** | Runs **`fs1`** and **`fs2`** natively. Mounts `freeswitch/conf` and overrides `vars.xml` per-instance (e.g. `vars.fs1.xml`). Exposes unique host SIP ports (`5070`, `5071`) mapped to container `5070`, and unique RTP ranges. |
+| **`docker-compose.kamailio.yml`** | Standalone Kamailio proxy on the shared `kulloo_net` network. Uses Docker DNS to distribute load to `fs1` and `fs2`. |
 
-Firewall rules must allow **SIP** (typically **5060** TCP/UDP), **RTP** (your `vars.xml` range), and **TCP** from the FreeSWITCH host to **Kulloo’s `ESL_OUTBOUND_PORT`** (e.g. **3200**). The image README / `docker-compose.freeswitch.yml` header lists example ports.
+Firewall rules must allow **SIP** (UDP/TCP 5060) to Kamailio, **RTP** UDP ranges directly to the FS host IPs, and local Docker networking for ESL port **3200**.
 
 ---
 

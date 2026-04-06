@@ -19,7 +19,7 @@ All routes below are relative to the base URL.
 
 ## Calls
 
-Full outbound (Plivo → FreeSWITCH → ESL) architecture and data flow: see [outbound-calls.md](../telephony/outbound-calls.md).
+Full outbound (Plivo → Kamailio → FreeSWITCH pool → ESL) architecture and data flow: see [outbound-calls.md](../telephony/outbound-calls.md).
 
 - `POST /api/calls/outbound/hello`
   - Runs the outbound “hello” flow

@@ -59,8 +59,9 @@ sequenceDiagram
   participant API as Kulloo_API
   participant Mongo as MongoDB
   participant Plivo
-  participant FS as FreeSWITCH
-  participant ESL as ESL_Handler
+  participant KAM as Kamailio_:5060
+  participant FS as FreeSWITCH_fs1_or_fs2
+  participant ESL as ESL_Handler_:3200
 
   Client->>API: POST /api/calls/outbound/hello + Idempotency-Key
   API->>Mongo: Create Call (_id, pending providerCallId, initiated)
@@ -71,9 +72,14 @@ sequenceDiagram
 
   Note over Plivo,Callee: PSTN rings; callee answers
   Plivo->>API: GET/POST Answer URL (CallUUID, X-PH-KullooCallId, kullooCallId)
-  API-->>Plivo: XML Dial User FREESWITCH_SIP_URI sipHeaders KullooCallId
+  API-->>Plivo: XML Dial User KAMAILIO_SIP_URI sipHeaders KullooCallId
 
-  Plivo->>FS: SIP to extension / user matching FREESWITCH_SIP_URI
+  Plivo->>KAM: SIP INVITE sip:1000@kamailio:5060 (KullooCallId present)
+  KAM->>KAM: ds_select_dst(1,4) → selects fs1 or fs2 (round-robin)
+  KAM->>FS: SIP INVITE sip:1000@fs1:5070 (ALL headers forwarded untouched)
+  
+  Note over Plivo,FS: RTP audio flows Plivo ↔ FreeSWITCH DIRECTLY
+  
   FS->>ESL: Outbound socket connect (per dialplan)
   ESL->>Mongo: findByStableCallId(KullooCallId), patch providerCallId=FS_UUID
   ESL->>FS: answer, tone, record_session, DTMF listen, stop, hangup
@@ -121,13 +127,13 @@ This document’s **PSTN** focus is the **`plivo`** row above.
 Routes: **`ANY /plivo/answer`** and **`ANY /api/plivo/answer`** (same handler).
 
 1. Resolve `kullooCallId` via `extractPlivoKullooCallId` (query + body, keys such as `kullooCallId`, `X-PH-KullooCallId`, case variants).
-2. Read `FREESWITCH_SIP_URI` (e.g. `sip:1000@<fs-public-ip>`). If missing, return XML with a spoken error + hangup.
+2. Read `KAMAILIO_SIP_URI` (e.g. `sip:1000@<kamailio-public-ip>`). If missing, falls back to `FREESWITCH_SIP_URI`. If both missing, return XML with a spoken error + hangup.
 3. Return Plivo XML:
 
 ```xml
 <Response>
   <Dial sipHeaders="KullooCallId=...">
-    <User>FREESWITCH_SIP_URI</User>
+    <User>KAMAILIO_SIP_URI</User>
   </Dial>
 </Response>
 ```
