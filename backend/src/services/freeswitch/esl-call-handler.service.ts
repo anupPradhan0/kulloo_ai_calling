@@ -30,6 +30,8 @@ export class EslCallHandlerService {
   private port: number;
   private host: string;
   private recordingsDir: string;
+  /** Absolute path; same base for FS `record_session`, Node `stat`, and DB `filePath`. */
+  private readonly recordingsBase: string;
   private readonly activeProviderCallIds = new Set<string>();
 
   private log(
@@ -394,6 +396,7 @@ export class EslCallHandlerService {
     this.port = options.port;
     this.host = options.host || "0.0.0.0";
     this.recordingsDir = options.recordingsDir || "/recordings";
+    this.recordingsBase = path.resolve(this.recordingsDir);
     this.callService = new CallService();
   }
 
@@ -747,7 +750,7 @@ export class EslCallHandlerService {
       await this.callService.setStatus(callId, "played", { playedAt: new Date() });
       await this.callService.pushEvent(call, "played", { message: "Tone played" });
 
-      const recordingPath = path.join(path.resolve(this.recordingsDir), `${input.callUuid}.wav`);
+      const recordingPath = path.join(this.recordingsBase, `${input.callUuid}.wav`);
       
       await this.callService.setStatus(callId, "recording_started", { recordingStartedAt: new Date() });
       await this.callService.pushEvent(call, "recording_started");
@@ -848,7 +851,7 @@ export class EslCallHandlerService {
    */
   private async handleRecordingComplete(callId: string, callUuid: string, recordingPath: string): Promise<void> {
     try {
-      const filePath = path.join(this.recordingsDir, `${callUuid}.wav`);
+      const filePath = path.join(this.recordingsBase, `${callUuid}.wav`);
       
       const call = await this.callService.findCallDocumentByStableCallId(callId);
       if (!call) {

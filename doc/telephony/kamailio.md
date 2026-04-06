@@ -23,7 +23,7 @@ This document describes how Kamailio operates as a SIP load balancer in front of
 graph TD
     P[Plivo] -->|SIP INVITE + KullooCallId| K[Kamailio:5060]
     K -->|dispatcher round-robin| F1[FreeSWITCH fs1:5070]
-    K --> F2[FreeSWITCH fs2:5071]
+    K --> F2[FreeSWITCH fs2:5070]
     
     P <-->|Direct RTP audio| F1
     P <-->|Direct RTP audio| F2

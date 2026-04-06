@@ -6,6 +6,8 @@ Kamailio acts as a pure **SIP signaling proxy** in front of the FreeSWITCH insta
 
 **Kamailio does NOT relay RTP audio.** Media flows directly between Plivo and FreeSWITCH.
 
+Set `KAMAILIO_ADVERTISE_ADDRESS` to your server's public IP when starting the container.
+
 ---
 
 ## Directory Structure

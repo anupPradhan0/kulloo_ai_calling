@@ -5,7 +5,7 @@
  *   Plivo sends SIP INVITE → Kamailio:5060 → dispatcher selects fs1 or fs2 → FreeSWITCH → ESL → Kulloo
  *
  * The <User> target in the Dial XML must point to KAMAILIO (KAMAILIO_SIP_URI), NOT directly to FreeSWITCH.
- * Kamailio will select the least-loaded / next-in-rotation FreeSWITCH instance and forward the INVITE.
+ * Kamailio will select the next FreeSWITCH instance in round-robin order and forward the INVITE.
  * It passes ALL SIP headers through untouched — KullooCallId header survives the Kamailio hop.
  *
  * Fallback: if KAMAILIO_SIP_URI is not set, falls back to FREESWITCH_SIP_URI (pre-Kamailio direct mode).
