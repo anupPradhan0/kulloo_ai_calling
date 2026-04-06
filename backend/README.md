@@ -4,6 +4,8 @@ TypeScript + Express + MongoDB backend with first end-to-end `hello-call` contra
 
 **Architecture and telephony (for people and AI assistants):** see [`doc/README.md`](../doc/README.md) in the repo root.
 
+**Production deploy on a server (Docker Compose):** see [`doc/deployment.md`](../doc/deployment.md) (overview) and [`Docker/README.md`](../Docker/README.md) (full detail).
+
 **Quick map of this package’s `src/` tree:** [`src/README.md`](src/README.md).
 
 ## Stack

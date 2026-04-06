@@ -16,7 +16,10 @@ Kulloo is a **TypeScript/Node calling backend**: an **Express** API, **MongoDB**
 |------|------|
 | [`backend/`](../backend/) | Main API package — layout and conventions: [backend/backend-folder-structure.md](backend/backend-folder-structure.md). |
 | [`freeswitch/`](../freeswitch/) | Checked-in FreeSWITCH configuration (dialplan, modules, vars). |
-| Root `docker-compose*.yml` | Example stacks for API, Redis, Mongo, FreeSWITCH. |
+| [`Docker/`](../Docker/) | **Production Docker**: merged `docker-compose.prod.yml`, dev/redis helpers, deploy guide ([Docker/README.md](../Docker/README.md)), stack notes ([Docker/DEPLOYMENT-REFERENCE.md](../Docker/DEPLOYMENT-REFERENCE.md)). |
+| Root `docker-compose*.yml` | Example stacks for API, Redis, Mongo, FreeSWITCH / server + Kamailio (alternate to `Docker/`). |
+
+**Server deployment (operators):** [deployment.md](deployment.md) — quick path to production Compose and checklist; deep detail in [`Docker/README.md`](../Docker/README.md).
 
 Local run instructions for the API: [`backend/README.md`](../backend/README.md).
 
@@ -27,10 +30,11 @@ Local run instructions for the API: [`backend/README.md`](../backend/README.md).
 ### For humans
 
 1. Read **What is Kulloo** (above), then skim [product/requirements.md](product/requirements.md) if you care about vision and scope.  
-2. For the concrete hello/recording behavior, read [product/hello-call-contract.md](product/hello-call-contract.md).  
-3. For telephony, follow what you are changing: [telephony/outbound-calls.md](telephony/outbound-calls.md) (API → Plivo → FS → ESL), [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md) (DID/SIP → FS → ESL), then [telephony/esl.md](telephony/esl.md) and [telephony/freeswitch.md](telephony/freeswitch.md) as needed.  
-4. Keep [reference/api.md](reference/api.md) and [reference/redis.md](reference/redis.md) open for HTTP surface and Redis behavior.  
-5. When editing code, use [backend/backend-folder-structure.md](backend/backend-folder-structure.md) so new files land in the right layer (controller vs service vs repository).
+2. To **deploy on a VPS** with Docker, start at [deployment.md](deployment.md), then follow [Docker/README.md](../Docker/README.md) as needed.  
+3. For the concrete hello/recording behavior, read [product/hello-call-contract.md](product/hello-call-contract.md).  
+4. For telephony, follow what you are changing: [telephony/outbound-calls.md](telephony/outbound-calls.md) (API → Plivo → FS → ESL), [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md) (DID/SIP → FS → ESL), then [telephony/esl.md](telephony/esl.md) and [telephony/freeswitch.md](telephony/freeswitch.md) as needed.  
+5. Keep [reference/api.md](reference/api.md) and [reference/redis.md](reference/redis.md) open for HTTP surface and Redis behavior.  
+6. When editing code, use [backend/backend-folder-structure.md](backend/backend-folder-structure.md) so new files land in the right layer (controller vs service vs repository).
 
 ### For AI / coding agents
 
@@ -38,17 +42,24 @@ Local run instructions for the API: [`backend/README.md`](../backend/README.md).
 - **HTTP routes:** [reference/api.md](reference/api.md).  
 - **Redis, env vars:** [reference/redis.md](reference/redis.md); extend [`backend/src/config/env.ts`](../backend/src/config/env.ts) instead of scattering `process.env`.  
 - **Call lifecycle and IDs:** [telephony/outbound-calls.md](telephony/outbound-calls.md), [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md), [telephony/esl.md](telephony/esl.md).  
-- **Do not assume** extra operational docs exist; a dedicated `stability.md` is not in the tree yet.
+- **Deploying:** [deployment.md](deployment.md), [Docker/README.md](../Docker/README.md).  
+- **Do not assume** a full operations runbook exists beyond deployment notes above.
 
 In the markdown files below this README, **relative links** are from each file’s own directory unless the text says otherwise.
 
 ---
 
+## Deployment
+
+| Document | Description |
+|----------|-------------|
+| [deployment.md](deployment.md) | **Server deployment**: Docker production quick start, checklist, links to Compose and telephony docs. |
+
 ## Product and contracts
 
 | Document | Description |
 |----------|-------------|
-| [product/requirements.md](product/requirements.md) | Platform vision, scope, phases, high-level data model (Jambonz-inspired direction). |
+| [product/requirements.md](product/requirements.md) | Platform vision, scope, phases, high-level data model (CPaaS-style reference patterns). |
 | [product/hello-call-contract.md](product/hello-call-contract.md) | Hello-call API, recording contract, acceptance-style notes. |
 
 ## Backend codebase
@@ -76,4 +87,4 @@ In the markdown files below this README, **relative links** are from each file�
 
 ---
 
-*Future operational notes (for example a stability runbook) may live at the `doc/` root or under an `operations/` folder.*
+*Operational runbooks (beyond [deployment.md](deployment.md)) may expand under `doc/` or an `operations/` folder later.*

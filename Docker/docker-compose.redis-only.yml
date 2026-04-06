@@ -1,0 +1,24 @@
+# Standalone Redis — use when Mongo/API run elsewhere but you need a local Redis.
+# Run from repository root:
+#   docker compose -f Docker/docker-compose.redis-only.yml up -d
+#
+# Connect: redis://localhost:6379
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: kulloo-redis-standalone
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_standalone_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  redis_standalone_data:

@@ -27,7 +27,7 @@ Recording for the **Plivo + FreeSWITCH** path is **not** primarily Plivo’s clo
 
 ## 2. The “call spine” (stable business id)
 
-Kulloo uses the same **concept** as Jambonz’s `call_sid`, with different naming:
+Kulloo uses the same **concept** as a typical carrier **stable call id** (often named `call_sid` elsewhere), with Kulloo-specific naming:
 
 - **Canonical stable id:** Mongo `Call._id` (24-character hex ObjectId).
 - **API alias:** Virtual field `callSid` on `Call` (same value as `_id` in JSON).

@@ -212,7 +212,7 @@ export class EslCallHandlerService {
     return evt;
   }
 
-  /** Value = `Call._id` hex (Jambonz-style stable id); SIP header name remains `KullooCallId`. */
+  /** Value = `Call._id` hex (stable telephony correlation id); SIP header name remains `KullooCallId`. */
   private extractKullooCallId(headersObj: Record<string, unknown>): string | null {
     const candidates = Object.entries(headersObj)
       .filter(([k]) => k.toLowerCase().includes("kulloocallid"))

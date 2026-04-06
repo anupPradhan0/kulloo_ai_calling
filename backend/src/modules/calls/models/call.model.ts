@@ -20,7 +20,7 @@ export type CallStatus =
   | "failed";
 
 /**
- * Call persistence. The canonical **stable business id** (same role as Jambonz `call_sid`) is
+ * Call persistence. The canonical **stable business id** (telephony correlation spine, like a carrier `call_sid`) is
  * `Call._id` as a 24-char hex string. It is propagated to the media leg on SIP as custom header
  * `KullooCallId` (not `X-Call-Sid`, by design). API JSON also exposes this as virtual `callSid`.
  */
