@@ -181,6 +181,14 @@ export class CallService {
   }
 
   /**
+   * Lists recent recording rows from Mongo (newest first). Limit is clamped to 1..500.
+   */
+  async listRecentRecordings(limit: number): Promise<RecordingDocument[]> {
+    const cap = Math.min(500, Math.max(1, Math.floor(limit)));
+    return this.recordingRepository.listRecent(cap);
+  }
+
+  /**
    * Fetches one recording by Mongo id or throws 404 for the HTTP layer.
    */
   async getRecordingById(recordingId: string): Promise<RecordingDocument> {

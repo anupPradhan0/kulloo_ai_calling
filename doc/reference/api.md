@@ -44,6 +44,8 @@ Full outbound (Plivo → FreeSWITCH → ESL) architecture and data flow: see [ou
 
 ### Recording metadata + file
 
+- `GET /api/recordings`
+  - List recording metadata from MongoDB (newest first). Optional query: `limit` (default 200, max 500).
 - `GET /api/recordings/:recordingId`
   - Returns recording metadata from MongoDB
 - `GET /api/recordings/:recordingId/file`

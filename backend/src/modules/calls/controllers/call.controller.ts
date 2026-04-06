@@ -21,6 +21,28 @@ import { CallService } from "../services/call.service";
 
 const callService = new CallService();
 
+const DEFAULT_RECORDINGS_LIST_LIMIT = 200;
+
+/**
+ * GET /api/recordings — lists recent recording metadata from Mongo (optional query: limit, default 200, max 500).
+ */
+export async function listAllRecordings(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const raw = req.query.limit;
+    let limit = DEFAULT_RECORDINGS_LIST_LIMIT;
+    if (typeof raw === "string" && raw.trim() !== "") {
+      const n = Number.parseInt(raw, 10);
+      if (Number.isFinite(n)) {
+        limit = n;
+      }
+    }
+    const recordings = await callService.listRecentRecordings(limit);
+    res.status(200).json({ success: true, count: recordings.length, data: recordings });
+  } catch (error) {
+    next(error);
+  }
+}
+
 /**
  * GET /api/recordings/local — JSON list of WAV files in the recordings directory with API-relative URLs.
  */

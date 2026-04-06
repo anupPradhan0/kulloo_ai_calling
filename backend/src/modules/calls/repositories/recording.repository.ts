@@ -44,6 +44,13 @@ export class RecordingRepository {
   }
 
   /**
+   * Lists recent recordings across all calls (newest first), capped for API safety.
+   */
+  async listRecent(limit: number): Promise<RecordingDocument[]> {
+    return RecordingModel.find().sort({ createdAt: -1 }).limit(limit);
+  }
+
+  /**
    * Updates status and optional duration or URL fields on an existing recording.
    */
   async updateStatus(

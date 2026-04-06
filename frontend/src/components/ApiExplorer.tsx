@@ -65,7 +65,12 @@ export function ApiExplorer() {
       }
 
       const path = buildPath(ep.path, params)
-      const url = `${baseUrl.replace(/\/$/, '')}${path}`
+      const qs = ep.queryString?.trim()
+        ? ep.queryString.startsWith('?')
+          ? ep.queryString
+          : `?${ep.queryString}`
+        : ''
+      const url = `${baseUrl.replace(/\/$/, '')}${path}${qs}`
 
       const headers: Record<string, string> = {}
       let body: string | undefined
@@ -160,7 +165,10 @@ export function ApiExplorer() {
               <li key={ep.id} className="endpoint-card">
                 <div className="endpoint-head">
                   <span className={`method method-${ep.method}`}>{ep.method}</span>
-                  <code className="path">{ep.path}</code>
+                  <code className="path">
+                    {ep.path}
+                    {ep.queryString ?? ''}
+                  </code>
                   {ep.methodNote ? (
                     <span className="method-note">({ep.methodNote})</span>
                   ) : null}

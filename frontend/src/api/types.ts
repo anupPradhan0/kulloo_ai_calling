@@ -20,5 +20,7 @@ export interface ApiEndpoint {
   bodyTemplate?: Record<string, unknown> | null
   idempotencyHeader?: boolean
   pathParams?: PathParamSpec[]
+  /** Appended to the URL (e.g. `?limit=200`). Must start with `?` if non-empty. */
+  queryString?: string
   responseHint?: ResponseHint
 }

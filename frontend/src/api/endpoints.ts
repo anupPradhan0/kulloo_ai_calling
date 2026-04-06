@@ -26,12 +26,12 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     method: 'POST',
     path: '/api/calls/outbound/hello',
     description:
-      'Start an outbound hello call. A fresh Idempotency-Key is sent on each test.',
+      'Start an outbound hello call. A fresh Idempotency-Key is sent on each test. Use provider "plivo" or "twilio" for real PSTN; "sip-local" only simulates in Mongo (no phone ring).',
     idempotencyHeader: true,
     bodyTemplate: {
-      to: '+15551234567',
-      from: '+15557654321',
-      provider: 'sip-local',
+      to: '+917735322819',
+      from: '+918035450404',
+      provider: 'plivo',
       recordingEnabled: true,
     },
   },
@@ -42,6 +42,15 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     path: '/api/calls/:callId/recordings',
     description: 'List recording metadata for a call you already created.',
     pathParams: [{ name: 'callId', placeholder: 'Call id (from hello response)' }],
+  },
+  {
+    id: 'recordings-list',
+    group: 'Recordings',
+    method: 'GET',
+    path: '/api/recordings',
+    queryString: '?limit=200',
+    description:
+      'List recent call recordings from the database (newest first). Change limit in the query string (1–500; default 200 if omitted).',
   },
   {
     id: 'recordings-metadata',
