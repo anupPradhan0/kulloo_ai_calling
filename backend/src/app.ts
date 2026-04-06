@@ -11,6 +11,7 @@ import { apiRouter } from "./routes";
 import { errorHandler, notFoundHandler } from "./middlewares/error.middleware";
 import { correlationIdMiddleware } from "./middlewares/correlation.middleware";
 import { registerPlivoWebhookRoutes } from "./modules/calls/routes/plivo.webhooks";
+import { listAllRecordings } from "./modules/calls/controllers/call.controller";
 import { env } from "./config/env";
 
 /** Fully configured Express instance (not yet listening on a port). */
@@ -38,6 +39,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(correlationIdMiddleware);
 
 registerPlivoWebhookRoutes(app);
+
+/** List-recordings must be registered on `app` so it is not lost inside nested `Router` matching for `/recordings`. */
+app.get("/api/recordings", listAllRecordings);
+app.get("/api/recordings/", listAllRecordings);
 
 app.use("/api", apiRouter);
 

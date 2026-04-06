@@ -25,6 +25,8 @@
 
   --result-bg: #f4f3f0;
   --result-border: #ddd9d3;
+  --json-bg: #f8f6f2;
+  --json-border: #e5e1da;
   --err-bg: #fef2f2;
   --err-border: #fecaca;
   --err-fg: #991b1b;
@@ -60,6 +62,8 @@
 
     --result-bg: #222228;
     --result-border: #3a3a44;
+    --json-bg: #1a1d24;
+    --json-border: #353945;
     --err-bg: #3f1d1d;
     --err-border: #7f1d1d;
     --err-fg: #fecaca;

@@ -33,6 +33,28 @@ function groupBy<T>(items: T[], key: (t: T) => string): Map<string, T[]> {
   return m
 }
 
+/** Pretty-print JSON responses; leave plain text, XML, and truncated bodies unchanged. */
+function formatResponseForDisplay(raw: string, contentType: string): string {
+  if (!raw.trim() || raw.includes('\n… [truncated]')) {
+    return raw
+  }
+  const ct = contentType.toLowerCase()
+  const t = raw.trim()
+  const likelyJson =
+    ct.includes('application/json') ||
+    ct.includes('+json') ||
+    (t.startsWith('{') && t.endsWith('}')) ||
+    (t.startsWith('[') && t.endsWith(']'))
+  if (!likelyJson) {
+    return raw
+  }
+  try {
+    return JSON.stringify(JSON.parse(t), null, 2)
+  } catch {
+    return raw
+  }
+}
+
 export function ApiExplorer() {
   const [baseUrl, setBaseUrl] = useState(DEFAULT_API_BASE_URL)
   const [paramValues, setParamValues] = useState<Record<string, string>>({})
@@ -225,6 +247,11 @@ export function ApiExplorer() {
 
 function ResultPanel({ result }: { result?: TestResult }) {
   if (!result) return null
+  const formatted = result.error
+    ? ''
+    : formatResponseForDisplay(result.bodyPreview, result.contentType)
+  const isPrettyJson = !result.error && formatted !== result.bodyPreview
+
   return (
     <div className={`result ${result.error ? 'result-error' : ''}`}>
       {result.error ? (
@@ -237,7 +264,11 @@ function ResultPanel({ result }: { result?: TestResult }) {
               <span className="result-ct"> — {result.contentType}</span>
             ) : null}
           </div>
-          <pre className="result-body mono">{result.bodyPreview}</pre>
+          <pre
+            className={`result-body mono${isPrettyJson ? ' result-body--json' : ''}`}
+          >
+            {formatted}
+          </pre>
         </>
       )}
     </div>
