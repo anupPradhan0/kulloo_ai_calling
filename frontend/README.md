@@ -43,6 +43,8 @@ docker build -f frontend/Dockerfile --build-arg SRC_PREFIX=frontend/ --target pr
 
 `SRC_PREFIX` must include the trailing slash (`frontend/`).
 
+Nginx config is built at container start from `docker/nginx/default.conf.in` (placeholder `__API_UPSTREAM__`) so normal `$uri` / `$host` are not broken by image `envsubst`.
+
 ```bash
 docker run --rm -p 8080:80 kulloo-frontend
 ```
