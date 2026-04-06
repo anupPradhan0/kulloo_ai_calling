@@ -61,10 +61,11 @@ In the markdown files below this README, **relative links** are from each file�
 
 | Document | Description |
 |----------|-------------|
-| [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md) | Inbound: Plivo Answer URL → FreeSWITCH → ESL → Mongo. |
-| [telephony/outbound-calls.md](telephony/outbound-calls.md) | Outbound: API → Plivo → FreeSWITCH → ESL, `KullooCallId`. |
-| [telephony/esl.md](telephony/esl.md) | Event Socket: FreeSWITCH connects to Kulloo (outbound ESL pattern). |
-| [telephony/freeswitch.md](telephony/freeswitch.md) | FreeSWITCH config layout, dialplan, Docker notes. |
+| [telephony/kamailio.md](telephony/kamailio.md) | **Kamailio SIP load balancer**: architecture, modules, KullooCallId flow, port plan, RTP ranges. |
+| [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md) | Inbound: Plivo Answer URL → Kamailio → FreeSWITCH pool → ESL → Mongo. |
+| [telephony/outbound-calls.md](telephony/outbound-calls.md) | Outbound: API → Plivo → Kamailio → FreeSWITCH pool → ESL, `KullooCallId`. |
+| [telephony/esl.md](telephony/esl.md) | Event Socket: FreeSWITCH connects to Kulloo (outbound ESL pattern, multi-instance). |
+| [telephony/freeswitch.md](telephony/freeswitch.md) | FreeSWITCH config layout, multi-instance (fs1/fs2), SIP port 5070, Docker notes. |
 
 ## Reference
 

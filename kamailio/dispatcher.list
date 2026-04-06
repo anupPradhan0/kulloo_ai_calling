@@ -1,0 +1,35 @@
+##
+## dispatcher.list — FreeSWITCH instance pool for Kamailio dispatcher module
+##
+## Format:
+##   setid  destination_uri            flags  priority  attrs
+##
+## setid    : Pool ID — must match ds_select_dst(1, ...) in kamailio.cfg
+## dest_uri : SIP URI of the FreeSWITCH instance
+##            Uses Docker service hostname (resolved by Docker embedded DNS)
+## flags    : 0 = active (monitored); 2 = inactive (skip but keep in list)
+## priority : 0 = equal (round-robin ignores this; use for weighted if alg changes)
+## attrs    : Key=value metadata (informational only; used in xlog/debug)
+##
+## Port assignment:
+##   fs1 listens on SIP port 5070 (Kamailio owns 5060)
+##   fs2 listens on SIP port 5070 (each container has its own port internally)
+##   Host-level mapping: fs1 -> host:5070, fs2 -> host:5071
+##   Inside Docker network: each container exposes :5070 on its own IP
+##
+## To add a third instance:
+##   1  sip:fs3:5070  0  0  duid=fs3
+##
+## To temporarily disable an instance (e.g., for maintenance):
+##   2  sip:fs1:5070  2  0  duid=fs1
+##   (flag=2 marks it inactive; Kamailio will not route to it)
+##
+## Apply changes at runtime (no restart needed):
+##   docker exec kamailio kamctl dispatcher reload
+##
+
+# Set 1: FreeSWITCH media server pool
+# All instances are identical in role — dispatcher uses round-robin (alg=4)
+
+1  sip:fs1:5070  0  0  duid=fs1;role=media
+1  sip:fs2:5070  0  0  duid=fs2;role=media

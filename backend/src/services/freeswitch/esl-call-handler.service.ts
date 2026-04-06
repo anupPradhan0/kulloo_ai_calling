@@ -409,9 +409,20 @@ export class EslCallHandlerService {
         });
 
         this.server.on("connection::open", (conn: Connection) => {
-          logger.info("esl_connection_open", { component: "esl" });
+          // Log the remote address of the connecting FreeSWITCH instance.
+          // In multi-instance deployments (fs1, fs2, ...) this tells us which FS handled the call.
+          // modesl Connection wraps a net.Socket — access it via the internal socket property.
+          const socket = (conn as unknown as { socket?: { remoteAddress?: string; remotePort?: number } }).socket;
+          const fsRemoteAddress = socket?.remoteAddress ?? "unknown";
+          const fsRemotePort = socket?.remotePort ?? "unknown";
+          logger.info("esl_connection_open", {
+            component: "esl",
+            fsRemoteAddress,
+            fsRemotePort,
+            note: "FreeSWITCH instance connected for outbound ESL socket",
+          });
           this.handleConnection(conn).catch((err: unknown) => {
-            logger.error("esl_connection_handler_failed", { component: "esl", err });
+            logger.error("esl_connection_handler_failed", { component: "esl", fsRemoteAddress, err });
           });
         });
 

@@ -1,0 +1,51 @@
+<include>
+  <!--
+    vars.fs1.xml — FreeSWITCH Instance 1 variable overrides
+    
+    Docker Compose mounts this as /etc/freeswitch/vars.xml (replacing the base file),
+    OR as an additional include that overrides the base vars.xml values.
+    
+    Instance 1 assignment:
+    - SIP:  host port 5070 → container port 5070
+    - RTP:  host ports 16384-17383 → container ports 16384-17383
+    - ESL:  connects to api:3200
+    
+    CRITICAL: external_sip_ip and RTP ext-ip MUST be the server PUBLIC IP.
+    FreeSWITCH uses this in SDP; Plivo sends audio to this IP.
+    Wrong IP = silent calls.
+    
+    Replace 148.135.138.190 with your actual server public IP.
+  -->
+
+  <!-- Public IPv4 of the server (same for all FS instances on one server) -->
+  <X-PRE-PROCESS cmd="set" data="external_sip_ip=148.135.138.190"/>
+  <X-PRE-PROCESS cmd="set" data="domain=$${external_sip_ip}"/>
+
+  <!--
+    Kulloo API ESL connection.
+    In Docker Compose, the API service is named "api" — Docker DNS resolves it.
+    FreeSWITCH connects to api:3200 when the hello dialplan runs the socket app.
+  -->
+  <X-PRE-PROCESS cmd="set" data="kulloo_esl_host=api"/>
+  <X-PRE-PROCESS cmd="set" data="kulloo_esl_port=3200"/>
+
+  <!-- Recording webhook (optional) -->
+  <X-PRE-PROCESS cmd="set" data="kulloo_recording_webhook_url=https://kulloocall.anuppradhan.in/api/calls/callbacks/freeswitch/recording"/>
+
+  <!-- Codecs -->
+  <X-PRE-PROCESS cmd="set" data="global_codec_prefs=OPUS,PCMU,PCMA"/>
+  <X-PRE-PROCESS cmd="set" data="outbound_codec_prefs=OPUS,PCMU,PCMA"/>
+
+  <!--
+    RTP port range — INSTANCE 1 allocation.
+    Non-overlapping with fs2 (17384-18383) to avoid UDP port conflicts on the host.
+    
+    16384 to 17383 = 1000 ports = 500 concurrent RTP streams
+    (Each call uses 2 ports: RTP + RTCP)
+    
+    Docker: publish "16384-17383:16384-17383/udp" on the fs1 service.
+    UFW/firewall: allow UDP 16384-17383 from anywhere (Plivo sends RTP to these ports).
+  -->
+  <X-PRE-PROCESS cmd="set" data="rtp_start_port=16384"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_end_port=17383"/>
+</include>

@@ -1,9 +1,39 @@
 <include>
+  <!--
+    dialplan/hello.xml — Hello call extension for Kulloo (context: mrf)
+    
+    Matches destination_number 1000 or hello (from Kamailio → FreeSWITCH INVITE).
+    Runs the FreeSWITCH `socket` application to hand off call control to Kulloo API via ESL.
+    
+    FreeSWITCH opens a TCP connection to kulloo_esl_host:kulloo_esl_port
+    (defined in vars.xml / vars.fsN.xml — NOT hardcoded here).
+    
+    Multi-instance notes:
+    - All FS instances (fs1, fs2, ...) connect to the SAME Kulloo API on port 3200
+    - The ESL handler accepts connections from any FS instance
+    - KullooCallId in SIP headers ties the ESL connection to the right Mongo Call document
+    
+    ESL mode: "async full"
+    - async: allows dialplan to continue while socket is running
+    - full: transfers complete session control to Kulloo, including DTMF and events
+    
+    Context must match the Sofia profile context in freeswitch.xml (both use "mrf").
+  -->
   <context name="mrf">
     <extension name="hello-call">
       <condition field="destination_number" expression="^(1000|hello)$">
-        <!-- Connect to Kulloo backend via ESL outbound socket for full programmatic control -->
-        <action application="socket" data="148.135.138.190:3200 async full"/>
+        <!--
+          Connect to Kulloo backend via ESL outbound socket for full programmatic control.
+          
+          kulloo_esl_host: hostname/IP of the Kulloo API service
+            - Docker Compose: "api" (Docker DNS resolves container name)
+            - Bare metal: the API server's IP address
+          kulloo_esl_port: port Kulloo's EslCallHandlerService listens on (default 3200)
+          
+          Both variables are set in vars.xml (base) and overridden in vars.fsN.xml.
+          Do NOT hardcode IPs here — use the variables.
+        -->
+        <action application="socket" data="$${kulloo_esl_host}:$${kulloo_esl_port} async full"/>
       </condition>
     </extension>
   </context>

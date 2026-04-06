@@ -1,12 +1,64 @@
 <include>
-  <!-- Public IPv4 of this VPS — required so Plivo gets correct Contact/RTP (Docker NAT). -->
+  <!--
+    vars.xml — FreeSWITCH global variables (base/fs1 defaults)
+    
+    Multi-instance usage:
+    - This file contains fs1 defaults and shared variables
+    - Per-instance overrides live in vars.fs1.xml and vars.fs2.xml
+    - Docker Compose volume-mounts the per-instance file on top of this one,
+      so you can use this as the canonical template
+    
+    IMPORTANT — ext-rtp-ip and external_sip_ip:
+    - Must be the PUBLIC IPv4 of the server (not Docker container IP)
+    - FreeSWITCH advertises this in SDP so Plivo knows where to send RTP audio
+    - Wrong value = silent calls or one-way audio (very common mistake)
+    - Set to your VPS/server public IP in production
+    
+    ESL Outbound socket:
+    - kulloo_esl_host: hostname or IP of the Kulloo API server
+      In Docker Compose: use the service name (e.g., "api" or "kulloo-api")
+      On bare metal: use the API server's IP
+    - kulloo_esl_port: port Kulloo ESL listener is bound to (default 3200)
+  -->
+
+  <!-- Public IPv4 of this VPS — required so Plivo gets correct Contact/RTP in SDP.
+       Replace with your actual server public IP. -->
   <X-PRE-PROCESS cmd="set" data="external_sip_ip=148.135.138.190"/>
   <X-PRE-PROCESS cmd="set" data="domain=$${external_sip_ip}"/>
-  <!-- FreeSWITCH -> Kulloo backend callback for recording completion -->
+
+  <!--
+    Kulloo API ESL outbound connection target.
+    FreeSWITCH opens a TCP connection to this host:port when the dialplan runs
+    the `socket` application (see dialplan/hello.xml).
+    
+    In Docker Compose: set to the API service name ("api") and port 3200.
+    In bare-metal: set to the API server's IP address.
+  -->
+  <X-PRE-PROCESS cmd="set" data="kulloo_esl_host=api"/>
+  <X-PRE-PROCESS cmd="set" data="kulloo_esl_port=3200"/>
+
+  <!-- Recording webhook (optional — used if dialplan posts completion to API) -->
   <X-PRE-PROCESS cmd="set" data="kulloo_recording_webhook_url=https://kulloocall.anuppradhan.in/api/calls/callbacks/freeswitch/recording"/>
+
+  <!-- Codec preferences — OPUS preferred, PCMU/PCMA as fallback -->
   <X-PRE-PROCESS cmd="set" data="global_codec_prefs=OPUS,PCMU,PCMA"/>
   <X-PRE-PROCESS cmd="set" data="outbound_codec_prefs=OPUS,PCMU,PCMA"/>
+
+  <!--
+    RTP port range for this instance (fs1 defaults).
+    
+    Port math:
+    - Each call needs 2 UDP ports (one for RTP, one for RTCP)
+    - 1000 ports / 2 = 500 concurrent streams per instance
+    
+    Instance assignment (non-overlapping):
+    - fs1: 16384 – 17383  (1000 ports = 500 streams)
+    - fs2: 17384 – 18383  (1000 ports = 500 streams)
+    - fs3: 18384 – 19383  (if you add a third instance)
+    
+    FireWall / Docker: expose UDP range matching this on the host.
+    docker-compose maps "16384-17383:16384-17383/udp" for fs1.
+  -->
   <X-PRE-PROCESS cmd="set" data="rtp_start_port=16384"/>
-  <!-- ~16k UDP ports for RTP; align Docker publishes and host firewall with this range. -->
-  <X-PRE-PROCESS cmd="set" data="rtp_end_port=32768"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_end_port=17383"/>
 </include>

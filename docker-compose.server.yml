@@ -1,18 +1,27 @@
-# Server stack: MongoDB + Kulloo API (+ optional FreeSWITCH).
+# docker-compose.server.yml — Kulloo production stack
 #
 # On your VPS (with repo cloned):
 #   cp backend/.env.example .env
-#   # edit .env — set MONGODB_URI=mongodb://mongodb:27017/sip-backend, REDIS_URL=redis://redis:6379 (required; compose sets this on api by default), PUBLIC_BASE_URL, Plivo/Twilio, etc.
-#   docker compose -f docker-compose.server.yml up -d --build
+#   # edit .env — set KAMAILIO_SIP_URI, MONGODB_URI, REDIS_URL, PLIVO_*, etc.
+#   docker compose -f docker-compose.server.yml -f docker-compose.kamailio.yml up -d --build
 #
 # API: http://<host>:5000  — health: GET /api/health
 #
-# FreeSWITCH (SIP/RTP + local recordings): add profile "media" and have ./freeswitch/conf from this repo:
-#   docker compose -f docker-compose.server.yml --profile media up -d --build
+# Architecture:
+#   Plivo → Kamailio:5060 → [fs1:5070 | fs2:5071] → ESL → api:3200
+#   RTP: Plivo <→ FreeSWITCH directly (Kamailio does NOT relay audio)
 #
-# If you deploy the API with Dokploy only, use this compose for mongodb (+ freeswitch) and point
-# Dokploy env MONGODB_URI at mongodb://<server-ip>:27017/sip-backend or the Docker network hostname
-# if Dokploy joins the same user-defined network.
+# Port plan:
+#   5000    : Kulloo API (HTTP)
+#   5060    : Kamailio SIP (in docker-compose.kamailio.yml)
+#   5070    : fs1 SIP (host) → 5070 (container)
+#   5071    : fs2 SIP (host) → 5070 (container)
+#   16384-17383/udp : fs1 RTP  (500 concurrent streams)
+#   17384-18383/udp : fs2 RTP  (500 concurrent streams)
+#   3200    : ESL outbound port (FreeSWITCH connects TO Kulloo API)
+#   8021    : FreeSWITCH classic ESL (optional, for tooling)
+#   27017   : MongoDB (loopback only)
+#   6379    : Redis (loopback only)
 
 services:
   mongodb:
@@ -31,6 +40,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - kulloo_net
 
   redis:
     image: redis:7-alpine
@@ -46,6 +57,8 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    networks:
+      - kulloo_net
 
   api:
     build:
@@ -54,9 +67,12 @@ services:
       target: production
     image: kulloo-backend:local
     container_name: kulloo-api
+    hostname: api
     restart: unless-stopped
     ports:
       - "5000:5000"
+      # ESL outbound: ALL FreeSWITCH instances (fs1, fs2) connect to this port
+      - "3200:3200"
     env_file:
       - path: .env
         required: false
@@ -66,6 +82,8 @@ services:
       MONGODB_URI: mongodb://mongodb:27017/sip-backend
       RECORDINGS_DIR: /recordings
       REDIS_URL: redis://redis:6379
+      # ESL outbound port — fs1 and fs2 both connect here
+      ESL_OUTBOUND_PORT: "3200"
     volumes:
       - recordings_data:/recordings
     depends_on:
@@ -73,23 +91,81 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - kulloo_net
 
-  # Optional: SIP media + local WAV recordings (needs ./freeswitch/conf from repo)
-  freeswitch:
-    profiles: ["media"]
-    image: drachtio/drachtio-freeswitch-mrf:latest
-    container_name: kulloo-freeswitch
+  # FreeSWITCH Instance 1 (fs1)
+  # SIP: host:5070 → container:5070
+  # RTP: host:16384-17383 → container:16384-17383 (500 concurrent streams)
+  # ESL outbound: connects to api:3200
+  fs1:
+    image: signalwire/freeswitch:v1.10
+    container_name: kulloo-fs1
+    hostname: fs1
     restart: unless-stopped
     ports:
-      - "8022:8021/tcp"
-      - "5060:5060/udp"
-      - "5060:5060/tcp"
-      - "16384-32768:16384-32768/udp"
+      # SIP port — Kamailio routes to this (note: container internal is 5070)
+      - "5070:5070/udp"
+      - "5070:5070/tcp"
+      # Classic ESL (optional, for fs_cli tooling)
+      - "8021:8021/tcp"
+      # RTP audio range — INSTANCE 1 only (non-overlapping with fs2)
+      # UFW: allow UDP 16384-17383 from anywhere
+      - "16384-17383:16384-17383/udp"
     volumes:
-      - ./freeswitch/conf:/etc/freeswitch
+      # Full freeswitch config tree (dialplan, modules, etc.)
+      - ./freeswitch/conf:/etc/freeswitch:ro
+      # Per-instance vars override: set rtp_start/end_port, external_sip_ip, kulloo_esl_host
+      # This is mounted AS vars.xml, replacing the base one in conf/
+      - ./freeswitch/conf/vars.fs1.xml:/etc/freeswitch/vars.xml:ro
+      # Shared recordings volume — same as api container so ESL can write and API can serve
       - recordings_data:/recordings
+    environment:
+      # Signal to the image which instance this is (informational; used in logs)
+      FS_INSTANCE: fs1
+    networks:
+      - kulloo_net
+    depends_on:
+      - api
+
+  # FreeSWITCH Instance 2 (fs2)
+  # SIP: host:5071 → container:5070 (same container port, different host port)
+  # RTP: host:17384-18383 → container:17384-18383 (500 concurrent streams)
+  # ESL outbound: connects to api:3200 (same as fs1)
+  fs2:
+    image: signalwire/freeswitch:v1.10
+    container_name: kulloo-fs2
+    hostname: fs2
+    restart: unless-stopped
+    ports:
+      # SIP port — different host port than fs1; Kamailio dispatcher routes to sip:fs2:5070 (container port)
+      - "5071:5070/udp"
+      - "5071:5070/tcp"
+      # Classic ESL — different host port than fs1
+      - "8022:8021/tcp"
+      # RTP audio range — INSTANCE 2 only (non-overlapping with fs1)
+      # UFW: allow UDP 17384-18383 from anywhere
+      - "17384-18383:17384-18383/udp"
+    volumes:
+      - ./freeswitch/conf:/etc/freeswitch:ro
+      # fs2 gets its own vars.xml with different RTP range (17384-18383)
+      - ./freeswitch/conf/vars.fs2.xml:/etc/freeswitch/vars.xml:ro
+      - recordings_data:/recordings
+    environment:
+      FS_INSTANCE: fs2
+    networks:
+      - kulloo_net
+    depends_on:
+      - api
 
 volumes:
   mongodb_data:
   redis_data:
   recordings_data:
+
+networks:
+  kulloo_net:
+    name: kulloo_net
+    driver: bridge
+    # Named network shared with docker-compose.kamailio.yml
+    # Kamailio uses Docker DNS to resolve "fs1" and "fs2" hostnames for dispatcher

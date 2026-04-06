@@ -1,0 +1,51 @@
+<include>
+  <!--
+    vars.fs2.xml — FreeSWITCH Instance 2 variable overrides
+    
+    Docker Compose mounts this as /etc/freeswitch/vars.xml for the fs2 container.
+    
+    Instance 2 assignment:
+    - SIP:  host port 5071 → container port 5070
+    - RTP:  host ports 17384-18383 → container ports 17384-18383
+    - ESL:  connects to api:3200 (same API, same port — ESL handler accepts from all FS instances)
+    
+    CRITICAL: external_sip_ip MUST be the server PUBLIC IP.
+    Both fs1 and fs2 run on the same server → same public IP, different RTP ranges.
+    FreeSWITCH includes this IP in SDP so Plivo knows where to send audio.
+    
+    Replace 148.135.138.190 with your actual server public IP.
+  -->
+
+  <!-- Public IPv4 of the server (same as fs1 — both run on the same host) -->
+  <X-PRE-PROCESS cmd="set" data="external_sip_ip=148.135.138.190"/>
+  <X-PRE-PROCESS cmd="set" data="domain=$${external_sip_ip}"/>
+
+  <!--
+    Kulloo API ESL connection — same target as fs1.
+    The ESL handler in Kulloo accepts connections from ALL FS instances on port 3200.
+    KullooCallId header is used to correlate each ESL connection to the right Mongo Call document,
+    regardless of which FS instance connected.
+  -->
+  <X-PRE-PROCESS cmd="set" data="kulloo_esl_host=api"/>
+  <X-PRE-PROCESS cmd="set" data="kulloo_esl_port=3200"/>
+
+  <!-- Recording webhook (optional) -->
+  <X-PRE-PROCESS cmd="set" data="kulloo_recording_webhook_url=https://kulloocall.anuppradhan.in/api/calls/callbacks/freeswitch/recording"/>
+
+  <!-- Codecs -->
+  <X-PRE-PROCESS cmd="set" data="global_codec_prefs=OPUS,PCMU,PCMA"/>
+  <X-PRE-PROCESS cmd="set" data="outbound_codec_prefs=OPUS,PCMU,PCMA"/>
+
+  <!--
+    RTP port range — INSTANCE 2 allocation.
+    MUST NOT overlap with fs1 (16384-17383) — both containers run on the same host.
+    Overlapping RTP ranges = dropped audio, port conflicts, silent calls.
+    
+    17384 to 18383 = 1000 ports = 500 concurrent RTP streams
+    
+    Docker: publish "17384-18383:17384-18383/udp" on the fs2 service.
+    UFW/firewall: allow UDP 17384-18383 from anywhere.
+  -->
+  <X-PRE-PROCESS cmd="set" data="rtp_start_port=17384"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_end_port=18383"/>
+</include>

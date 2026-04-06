@@ -32,7 +32,29 @@ export const env = {
   redisWebhookDedupeTtlSec: parseIntEnv("REDIS_WEBHOOK_DEDUPE_TTL_SEC", 172_800),
   /** Optional override for absolute URLs (Plivo callbacks, recording links). */
   publicBaseUrl: process.env.PUBLIC_BASE_URL?.trim() || undefined,
-  /** Target for Plivo Dial toward FreeSWITCH (SIP URI). */
+  /**
+   * Kamailio SIP load balancer URI — the primary target for Plivo `<Dial><User>` in the Answer URL.
+   * When set, Plivo sends INVITEs to Kamailio which distributes them across the FreeSWITCH pool.
+   * Format: sip:1000@<kamailio-host>:5060  or  sip:1000@<public-ip>
+   * Takes precedence over FREESWITCH_SIP_URI when both are set.
+   */
+  kamailioSipUri: process.env.KAMAILIO_SIP_URI?.trim() || undefined,
+  /**
+   * Kamailio host/IP (used for logging and future health checks).
+   * Separate from kamailioSipUri so we can check connectivity independently.
+   */
+  kamailioHost: process.env.KAMAILIO_HOST?.trim() || undefined,
+  /**
+   * Comma-separated list of FreeSWITCH instance identifiers for health monitoring.
+   * Example: "fs1:5070,fs2:5071"
+   * Used by future health check tooling; not required at runtime.
+   */
+  freeswitchInstances: process.env.FREESWITCH_INSTANCES?.trim() || undefined,
+  /**
+   * Legacy: direct FreeSWITCH SIP URI (used when Kamailio is not deployed).
+   * Falls back to this if KAMAILIO_SIP_URI is not set.
+   * In Kamailio deployments, set KAMAILIO_SIP_URI instead.
+   */
   freeswitchSipUri: process.env.FREESWITCH_SIP_URI?.trim() || undefined,
   logLevel: process.env.LOG_LEVEL?.trim() || undefined,
   logFormat: process.env.LOG_FORMAT?.trim() || undefined,
@@ -42,7 +64,7 @@ export const env = {
   plivoAuthToken: process.env.PLIVO_AUTH_TOKEN?.trim() || undefined,
   plivoAnswerUrl: process.env.PLIVO_ANSWER_URL?.trim() || undefined,
   plivoHangupUrl: process.env.PLIVO_HANGUP_URL?.trim() || undefined,
-  /** Outbound ESL TCP port (FreeSWITCH `socket` connects here). */
+  /** Outbound ESL TCP port (FreeSWITCH `socket` connects here; all FS instances use the same port). */
   eslOutboundPort: parseIntEnv("ESL_OUTBOUND_PORT", 3200),
   /**
    * Optional recordings root. When unset, `server` defaults to `/recordings`;

@@ -1,0 +1,52 @@
+# docker-compose.kamailio.yml — Kamailio SIP Load Balancer
+#
+# Runs Kamailio as a pure SIP proxy in front of the FreeSWITCH pool.
+# Receives INVITEs from Plivo on port 5060, distributes to fs1/fs2 via dispatcher.
+#
+# Usage (standalone or merged with server stack):
+#   docker compose -f docker-compose.server.yml -f docker-compose.kamailio.yml up -d
+#
+# Requirements:
+#   - fs1 and fs2 services must be running (defined in docker-compose.server.yml)
+#   - kamailio/kamailio.cfg and kamailio/dispatcher.list must exist
+#   - UFW/firewall: allow UDP+TCP 5060 from Plivo IPs
+#
+# Kamailio does NOT relay RTP — audio flows Plivo <-> FreeSWITCH directly.
+# Only SIP signaling passes through Kamailio.
+
+services:
+  kamailio:
+    image: kamailio/kamailio:5.7-alpine
+    container_name: kulloo-kamailio
+    restart: unless-stopped
+    ports:
+      # SIP signaling — receives from Plivo, forwards to fs1/fs2
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+    volumes:
+      # Main Kamailio config (routing logic, dispatcher params, module loading)
+      - ./kamailio/kamailio.cfg:/etc/kamailio/kamailio.cfg:ro
+      # FreeSWITCH pool definition (hostnames resolved via Docker DNS)
+      - ./kamailio/dispatcher.list:/etc/kamailio/dispatcher.list:ro
+      # FIFO for kamctl management commands (dispatcher show, reload, etc.)
+      - /run/kamailio:/run/kamailio
+    networks:
+      - kulloo_net
+    # Kamailio needs to resolve fs1/fs2 hostnames via Docker DNS
+    # The kulloo_net network is defined in docker-compose.server.yml
+    depends_on: []
+    healthcheck:
+      # Verify Kamailio is responding to management commands
+      test: ["CMD", "kamctl", "dispatcher", "show"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+networks:
+  kulloo_net:
+    external: true
+    # This network is created by docker-compose.server.yml.
+    # Both compose files must use the same network so Kamailio can reach fs1/fs2 by hostname.
+    # If deploying standalone, create it first:
+    #   docker network create kulloo_net
