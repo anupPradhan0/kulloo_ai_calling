@@ -1,0 +1,100 @@
+# docker-compose.drachtio.yml — Flow B: Drachtio SIP Signaling
+#
+# This file activates Flow B by adding the external drachtio C++ server and
+# overriding the Kulloo API service with the required Drachtio env vars.
+#
+# Architecture (Flow B):
+#   Plivo → drachtio:5060 (C++ SIP engine) ← Node.js API via :9022 (command socket)
+#                                          → FreeSWITCH → ESL:3200 → Kulloo API
+#
+# What changes vs Flow A:
+#   - drachtio C++ container replaces Kamailio as the SIP signaling layer
+#   - Node.js app connects to drachtio command socket (CALL_CONTROL_BACKEND=drachtio)
+#
+# What does NOT change:
+#   - FreeSWITCH (media / RTP) — identical
+#   - ESL outbound socket (port 3200) — identical
+#   - MongoDB, Redis — identical
+#   - All HTTP API routes — identical
+#   - KullooCallId correlation — identical (Drachtio passes it through like Kamailio)
+#
+# Usage:
+#   docker compose \
+#     -f docker-compose.server.yml \
+#     -f docker-compose.drachtio.yml \
+#     up -d
+#
+# NOTE: Do NOT include docker-compose.kamailio.yml — Kamailio is NOT used in Flow B.
+#       Plivo's SIP target must be updated to point at the drachtio container's SIP port (5060).
+#
+# Prerequisites:
+#   - docker-compose.server.yml must be loaded first (defines kulloo_net, fs1/fs2, api)
+#   - UFW/firewall: allow UDP+TCP 5060 from Plivo IPs to the drachtio host
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Drachtio C++ SIP server
+  # Receives SIP INVITEs from Plivo on port 5060.
+  # Exposes the command socket on port 9022 for the Node.js API to connect.
+  # Does NOT relay RTP — audio flows Plivo ↔ FreeSWITCH directly (same as Kamailio).
+  # ─────────────────────────────────────────────────────────────────────────────
+  drachtio:
+    image: drachtio/drachtio-server:latest
+    container_name: kulloo-drachtio
+    restart: unless-stopped
+    ports:
+      # SIP signaling — receives from Plivo/PSTN, will proxy to FreeSWITCH
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      # Command socket — Node.js srf.connect() attaches here (NOT exposed to internet)
+      - "127.0.0.1:9022:9022/tcp"
+    environment:
+      # drachtio server log level: info | debug | error
+      DRACHTIO_LOG_LEVEL: ${DRACHTIO_LOG_LEVEL:-info}
+      # Secret shared with the Node.js app (must match DRACHTIO_SECRET in the api service)
+      DRACHTIO_SECRET: ${DRACHTIO_SECRET:-kulloo-drachtio-secret}
+      # Uncomment to enable HOMER SIP logging (replace with your Homer server):
+      # HOMER_BASE_URL: http://homer:9080
+    networks:
+      - kulloo_net
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tlnp 2>/dev/null | grep -q ':9022' || ss -tlnp | grep -q ':9022'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Kulloo API — Flow B override
+  # Extends the api service from docker-compose.server.yml with the env vars
+  # needed to activate Flow B (CALL_CONTROL_BACKEND=drachtio).
+  # All other api configuration (ports, volumes, MongoDB, Redis) is inherited.
+  # ─────────────────────────────────────────────────────────────────────────────
+  api:
+    depends_on:
+      - drachtio
+    environment:
+      # ── Flow B activation ──────────────────────────────────────────────────
+      CALL_CONTROL_BACKEND: drachtio
+
+      # ── Drachtio command socket (Node.js → drachtio C++ container) ────────
+      # Host: Docker service name (resolved via kulloo_net DNS)
+      DRACHTIO_HOST: drachtio
+      # Port: command socket (NOT SIP port 5060)
+      DRACHTIO_PORT: 9022
+      # Must match DRACHTIO_SECRET in the drachtio service above
+      DRACHTIO_SECRET: ${DRACHTIO_SECRET:-kulloo-drachtio-secret}
+
+      # ── SIP target for FreeSWITCH (unchanged from Flow A) ─────────────────
+      # Drachtio proxies INVITEs directly to FreeSWITCH (Kamailio is not in the path).
+      # This should point to fs1 (or a load-balanced target if you add your own LB logic).
+      # In a multi-FS setup use FREESWITCH_SIP_URI pointing to fs1 and add
+      # round-robin logic inside drachtio-sip-handler.service.ts.
+      # FREESWITCH_SIP_URI is read from .env / docker-compose.server.yml environment.
+
+networks:
+  kulloo_net:
+    external: true
+    # Created by docker-compose.server.yml. Both files must use the same network
+    # so the api container can resolve "drachtio" by hostname.

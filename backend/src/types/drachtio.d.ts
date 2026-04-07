@@ -29,6 +29,8 @@ declare module "drachtio-srf" {
     reason: string;
     headers: Record<string, string>;
     body?: string;
+    /** Send a SIP response with the given status code and optional headers/body. */
+    send(status: number, opts?: { headers?: Record<string, string>; body?: string }): void;
   }
 
   export interface Dialog extends EventEmitter {
@@ -62,11 +64,28 @@ declare module "drachtio-srf" {
 
   export class Srf extends EventEmitter {
     constructor(options?: SrfOptions);
-    connect(options: SrfOptions): Promise<void>;
+    /** Initiates connection to the external drachtio C++ server (event-based, fires "connect" event). */
+    connect(options: SrfOptions): void;
     disconnect(): void;
-    on(event: "connect", listener: (err: Error | null, hostport: string) => void): this;
+    /**
+     * Proxy a SIP request to one or more destinations.
+     * remainInDialog: keeps Drachtio in the signaling path for BYE/re-INVITE (mirrors Kamailio record_route).
+     */
+    proxyRequest(
+      req: SipRequest,
+      destination: string | string[],
+      opts?: {
+        remainInDialog?: boolean;
+        headers?: Record<string, string>;
+        forking?: boolean;
+        recordRoute?: boolean;
+      }
+    ): Promise<SipResponse>;
+    on(event: "connect", listener: (err: Error | null, hostport: string, version?: string, localHostports?: string) => void): this;
     on(event: "error", listener: (err: Error) => void): this;
     on(event: "invite", listener: (req: SipRequest, res: SipResponse) => void): this;
+    on(event: string, listener: (...args: unknown[]) => void): this;
+    use(method: string, middleware: ((req: SipRequest, res: SipResponse, next: () => void) => void)[]): void;
     invite(
       req: SipRequest,
       res: SipResponse,

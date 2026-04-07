@@ -13,6 +13,8 @@ import { OrphanCallsRecoveryService } from "./services/recovery/orphan-calls-rec
 import { RecordingsSyncService } from "./services/recovery/recordings-sync.service";
 import { logger } from "./utils/logger";
 import { assertRedisAvailable, disconnectRedis } from "./services/redis/redis.client";
+import { createCallControlBackend } from "./services/call-control/call-control-backend.factory";
+import type { CallControlBackend } from "./services/call-control/call-control-backend.interface";
 
 function shutdownRedis(): void {
   void disconnectRedis().catch(() => undefined);
@@ -110,6 +112,19 @@ async function bootstrap(): Promise<void> {
     eslOutboundPort,
     note: "FreeSWITCH connects inbound to this port",
   });
+
+  // Call-control backend: selects Flow A (default) or Flow B (Drachtio) based on env var.
+  // Flow A: no-op — Kamailio handles SIP, ESL handles media. Unchanged.
+  // Flow B: connects to external drachtio C++ server and registers the SIP INVITE handler.
+  const callControlBackend: CallControlBackend = createCallControlBackend();
+  await callControlBackend.start();
+
+  // Shutdown hook: stop call-control backend alongside Redis on SIGTERM/SIGINT.
+  const shutdownCallControl = (): void => {
+    void callControlBackend.stop().catch(() => undefined);
+  };
+  process.once("SIGTERM", shutdownCallControl);
+  process.once("SIGINT", shutdownCallControl);
 
   await listenWithPortFallback(env.port);
 }

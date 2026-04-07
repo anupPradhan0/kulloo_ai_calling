@@ -75,6 +75,36 @@ export const env = {
   orphanSweepIntervalMs: Number(process.env.ORPHAN_SWEEP_INTERVAL_MS ?? 60000),
   recordingsSyncGraceMs: Number(process.env.RECORDINGS_SYNC_GRACE_MS ?? 120000),
   recordingsSyncIntervalMs: Number(process.env.RECORDINGS_SYNC_INTERVAL_MS ?? 60000),
+  // ---------------------------------------------------------------------------
+  // Flow B: Drachtio SIP signaling (opt-in via CALL_CONTROL_BACKEND=drachtio)
+  // Default is "kulloo" which keeps Flow A (Kamailio/ESL) unchanged.
+  // ---------------------------------------------------------------------------
+  /**
+   * Which SIP call-control backend to activate at startup.
+   * "kulloo"  → Flow A (default): Plivo → Kamailio → FreeSWITCH → ESL → Kulloo
+   * "drachtio"→ Flow B (opt-in):  Plivo → Drachtio → FreeSWITCH → ESL → Kulloo
+   */
+  callControlBackend: (process.env.CALL_CONTROL_BACKEND?.trim() || "kulloo") as "kulloo" | "drachtio",
+  /**
+   * Drachtio C++ server host (Flow B only).
+   * srf.connect() command socket connects here. Defaults to Docker service name "drachtio".
+   */
+  drachtioHost: process.env.DRACHTIO_HOST?.trim() || "drachtio",
+  /**
+   * Drachtio command port — TCP port the drachtio C++ server exposes for Node.js app connections.
+   * NOT the SIP port (5060 is for Plivo→drachtio; this is the control plane). Default: 9022.
+   */
+  drachtioPort: parseIntEnv("DRACHTIO_PORT", 9022),
+  /**
+   * Shared secret between the drachtio C++ server and this Node.js app.
+   * Must match the secret in the drachtio container config.
+   */
+  drachtioSecret: process.env.DRACHTIO_SECRET?.trim() || "kulloo-drachtio-secret",
+  /**
+   * SIP port on the drachtio container where Plivo/carrier sends INVITEs (Flow B only).
+   * Used in logs and documentation only; the port mapping itself is in docker-compose.drachtio.yml.
+   */
+  drachtioSipPort: parseIntEnv("DRACHTIO_SIP_PORT", 5060),
 };
 
 /**

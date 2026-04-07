@@ -126,6 +126,14 @@ backend/
     │   ├── index.ts
     │   └── metrics.routes.ts
     ├── services/
+    │   ├── call-control/                    # [NEW] Flow A/B strategy pattern
+    │   │   ├── call-control-backend.interface.ts
+    │   │   ├── call-control-backend.factory.ts
+    │   │   ├── kulloo-backend.ts            # Flow A wrapper (no-op)
+    │   │   └── drachtio-backend.ts          # Flow B wrapper
+    │   ├── drachtio/                        # [NEW] Drachtio C++ server integration
+    │   │   ├── drachtio.client.ts           # srf.connect() lifecycle
+    │   │   └── drachtio-sip-handler.service.ts  # SIP INVITE → proxyRequest → FreeSWITCH
     │   ├── freeswitch/
     │   │   └── esl-call-handler.service.ts
     │   ├── health/
@@ -197,6 +205,12 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | `src/routes/index.ts` |
 | `src/routes/metrics.routes.ts` |
 | `src/server.ts` |
+| `src/services/call-control/call-control-backend.interface.ts` |
+| `src/services/call-control/call-control-backend.factory.ts` |
+| `src/services/call-control/kulloo-backend.ts` |
+| `src/services/call-control/drachtio-backend.ts` |
+| `src/services/drachtio/drachtio.client.ts` |
+| `src/services/drachtio/drachtio-sip-handler.service.ts` |
 | `src/services/freeswitch/esl-call-handler.service.ts` |
 | `src/services/health/readiness.service.ts` |
 | `src/services/observability/metrics.service.ts` |
@@ -304,6 +318,12 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | Path | Purpose |
 |------|---------|
 | **`freeswitch/esl-call-handler.service.ts`** | Outbound ESL TCP server; hello media flow; persists via **`CallService`** (no direct repository access from ESL). |
+| **`call-control/call-control-backend.interface.ts`** | Strategy interface: `start()`, `stop()`, `name` — shared by Flow A and Flow B backends. |
+| **`call-control/call-control-backend.factory.ts`** | Reads `CALL_CONTROL_BACKEND` env var; returns `KullooBackend` (Flow A) or `DrachtioBackend` (Flow B). |
+| **`call-control/kulloo-backend.ts`** | Flow A wrapper: structured no-op; ESL is started separately in `server.ts`. |
+| **`call-control/drachtio-backend.ts`** | Flow B wrapper: calls `connectToDrachtio()` + `registerInviteHandler()` in `start()`. |
+| **`drachtio/drachtio.client.ts`** | Creates shared `Srf` instance; wraps event-based `srf.connect()` in a Promise; exports `connectToDrachtio` / `disconnectFromDrachtio`. |
+| **`drachtio/drachtio-sip-handler.service.ts`** | Registers `srf.on('invite')` handler; reads `KullooCallId` header; calls `srf.proxyRequest()` to FreeSWITCH with `remainInDialog: true`. |
 | **`redis/*`** | ioredis client, idempotency cache, webhook dedupe. |
 | **`recovery/*`** | Orphan call sweep and recordings disk ↔ Mongo sync (use **`CallRepository`** / **`RecordingRepository`**). |
 | **`observability/metrics.service.ts`** | In-process metrics for `/api/metrics`. |
