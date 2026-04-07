@@ -19,31 +19,37 @@ Kulloo is a **TypeScript/Node calling backend**: an **Express** API, **MongoDB**
 | [`Docker/`](../Docker/) | **Production Docker**: [`docker-compose.yml`](../Docker/docker-compose.yml) (default Kamailio stack), [`docker-compose.drachtio.yml`](../Docker/docker-compose.drachtio.yml) (Flow B overlay), deploy guide ([Docker/README.md](../Docker/README.md)). |
 | Root `docker-compose*.yml` | Example stacks for API, Redis, Mongo, FreeSWITCH / server + Kamailio (alternate to `Docker/`). |
 
-**Server deployment (operators):** [deployment.md](deployment.md) — quick path to production Compose and checklist; deep detail in [`Docker/README.md`](../Docker/README.md).
+**Server deployment (operators):** [ops/deployment.md](ops/deployment.md) — quick path to production Compose and checklist; deep detail in [`Docker/README.md`](../Docker/README.md).
 
 Local run instructions for the API: [`backend/README.md`](../backend/README.md).
 
 ---
 
-## How to use this documentation
+## How to use this documentation (AI-first)
 
-### For humans
+This `doc/` folder is intended to be **AI-friendly**: it should let an agent answer architecture questions and place new code correctly **without scanning the full repository**.
 
-1. Read **What is Kulloo** (above), then skim [product/requirements.md](product/requirements.md) if you care about vision and scope.  
-2. To **deploy on a VPS** with Docker, start at [deployment.md](deployment.md), then follow [Docker/README.md](../Docker/README.md) as needed.  
-3. For the concrete hello/recording behavior, read [product/hello-call-contract.md](product/hello-call-contract.md).  
-4. For telephony, follow what you are changing: [telephony/outbound-calls.md](telephony/outbound-calls.md) (API → Plivo → FS → ESL), [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md) (DID/SIP → FS → ESL), then [telephony/esl.md](telephony/esl.md) and [telephony/freeswitch.md](telephony/freeswitch.md) as needed.  
-5. Keep [reference/api.md](reference/api.md) and [reference/redis.md](reference/redis.md) open for HTTP surface and Redis behavior.  
-6. When editing code, use [backend/backend-folder-structure.md](backend/backend-folder-structure.md) so new files land in the right layer (controller vs service vs repository).
+### AI quickstart (keep these open)
 
-### For AI / coding agents
+- **Where files go (source of truth):** [backend/backend-folder-structure.md](backend/backend-folder-structure.md) — start at **“Where to put new code”**.
+- **HTTP surface (routes + callbacks):** [reference/api.md](reference/api.md).
+- **Redis is required (keys/TTLs + why):** [reference/redis.md](reference/redis.md).
+- **Call lifecycles + correlation:** [telephony/outbound-calls.md](telephony/outbound-calls.md), [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md), [telephony/esl.md](telephony/esl.md).
+- **Which signaling edge is active (Flow A vs Flow B):** [telephony/flows/README.md](telephony/flows/README.md).
+- **Ops sanity checks (readiness, recovery loops):** [ops/stability.md](ops/stability.md), [ops/deployment.md](ops/deployment.md).
 
-- **Where files go:** [backend/backend-folder-structure.md](backend/backend-folder-structure.md) — start with the section **“Where to put new code”**.  
-- **HTTP routes:** [reference/api.md](reference/api.md).  
-- **Redis, env vars:** [reference/redis.md](reference/redis.md); extend [`backend/src/config/env.ts`](../backend/src/config/env.ts) instead of scattering `process.env`.  
-- **Call lifecycle and IDs:** [telephony/outbound-calls.md](telephony/outbound-calls.md), [telephony/inbound-call-dataflow.md](telephony/inbound-call-dataflow.md), [telephony/esl.md](telephony/esl.md).  
-- **Deploying:** [deployment.md](deployment.md), [Docker/README.md](../Docker/README.md).  
-- **Do not assume** a full operations runbook exists beyond deployment notes above.
+### Rules for agents (project conventions)
+
+- **Do not scatter `process.env`:** add/validate env vars in [`backend/src/config/env.ts`](../backend/src/config/env.ts) and import from there.
+- **Keep layers clean:** controllers stay thin; business rules go in services; Mongo queries in repositories (see [backend/backend-folder-structure.md](backend/backend-folder-structure.md)).
+- **Call correlation rule:** outbound API creates `Call` first; `KullooCallId` must survive SIP so ESL can attach FS UUID to that row (see [telephony/outbound-calls.md](telephony/outbound-calls.md)).
+- **ESL rule:** media control for the hello flow is owned by the outbound ESL socket handler (see [telephony/esl.md](telephony/esl.md)).
+
+### Human quickstart (minimal)
+
+- **Deploy:** [ops/deployment.md](ops/deployment.md) → [`Docker/README.md`](../Docker/README.md)
+- **Local:** [ops/local-development.md](ops/local-development.md)
+- **Hello contract:** [product/hello-call-contract.md](product/hello-call-contract.md)
 
 In the markdown files below this README, **relative links** are from each file’s own directory unless the text says otherwise.
 
@@ -53,7 +59,19 @@ In the markdown files below this README, **relative links** are from each file�
 
 | Document | Description |
 |----------|-------------|
-| [deployment.md](deployment.md) | **Server deployment**: Docker production quick start, checklist, links to Compose and telephony docs. |
+| [ops/deployment.md](ops/deployment.md) | **Server deployment**: Docker production quick start, checklist, links to Compose and telephony docs. |
+
+## Local development
+
+| Document | Description |
+|----------|-------------|
+| [ops/local-development.md](ops/local-development.md) | Local stack quickstart (API-only vs full telephony), common pitfalls. |
+
+## Stability and operations
+
+| Document | Description |
+|----------|-------------|
+| [ops/stability.md](ops/stability.md) | Reliability notes: idempotency, recovery loops, symptom→cause debugging. |
 
 ## Product and contracts
 
@@ -67,6 +85,14 @@ In the markdown files below this README, **relative links** are from each file�
 | Document | Description |
 |----------|-------------|
 | [backend/backend-folder-structure.md](backend/backend-folder-structure.md) | Full `backend/` tree and contributor rules for new code. |
+
+## Flows
+
+| Document | Description |
+|----------|-------------|
+| [telephony/flows/README.md](telephony/flows/README.md) | Flow hub: Flow A (default Kamailio) vs Flow B (Drachtio). |
+| [telephony/flows/flow-a-kamailio.md](telephony/flows/flow-a-kamailio.md) | Default signaling edge: Kamailio → FreeSWITCH → ESL. |
+| [telephony/flows/flow-b-drachtio.md](telephony/flows/flow-b-drachtio.md) | Opt-in signaling edge: Drachtio → FreeSWITCH → ESL. |
 
 ## Telephony and data flow
 
@@ -87,4 +113,4 @@ In the markdown files below this README, **relative links** are from each file�
 
 ---
 
-*Operational runbooks (beyond [deployment.md](deployment.md)) may expand under `doc/` or an `operations/` folder later.*
+*Operational runbooks (beyond [ops/deployment.md](ops/deployment.md)) may expand under `doc/` or an `operations/` folder later.*

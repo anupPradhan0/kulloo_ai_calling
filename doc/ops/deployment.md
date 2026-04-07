@@ -1,6 +1,6 @@
 # Deploying Kulloo on a server
 
-> **Doc hub:** [Documentation index](README.md) — this page is the **entry point** for production-style installs. **Full Compose details, file paths, and variants** live in [`Docker/README.md`](../Docker/README.md).
+> **Doc hub:** [Documentation index](../README.md) — this page is the **entry point** for production-style installs. **Full Compose details, file paths, and variants** live in [`Docker/README.md`](../../Docker/README.md).
 
 ---
 
@@ -16,7 +16,7 @@ A typical **production** install runs:
 | **FreeSWITCH** (often **fs1** + **fs2**) | SIP/RTP media, **hello** dialplan → ESL |
 | **Kamailio** (recommended for pool) | SIP **5060** from carrier → dispatcher → FS instances |
 
-RTP audio does **not** flow through Kamailio; it goes **Plivo ↔ FreeSWITCH**. See [telephony/kamailio.md](telephony/kamailio.md).
+RTP audio does **not** flow through Kamailio; it goes **Plivo ↔ FreeSWITCH**. See [../telephony/kamailio.md](../telephony/kamailio.md).
 
 ---
 
@@ -24,7 +24,7 @@ RTP audio does **not** flow through Kamailio; it goes **Plivo ↔ FreeSWITCH**. 
 
 - **Docker** and **Docker Compose v2** on the server.
 - **Public IPv4** (or correct advertise / SBC story) for SIP and SDP.
-- **Firewall / security group** aligned with [telephony/freeswitch.md](telephony/freeswitch.md) and [telephony/kamailio.md](telephony/kamailio.md) (5060, FS SIP host ports, RTP UDP ranges).
+- **Firewall / security group** aligned with [../telephony/freeswitch.md](../telephony/freeswitch.md) and [../telephony/kamailio.md](../telephony/kamailio.md) (5060, FS SIP host ports, RTP UDP ranges).
 - **Carrier** (e.g. Plivo) trunks / apps pointed at your **public** SIP endpoint and Answer URLs.
 
 ---
@@ -56,7 +56,7 @@ docker compose \
   up -d --build
 ```
 
-Set **`FREESWITCH_SIP_URI`** in `.env` for that path. See [telephony/drachtio.md](telephony/drachtio.md).
+Set **`FREESWITCH_SIP_URI`** in `.env` for that path. See [../telephony/drachtio.md](../telephony/drachtio.md).
 
 **Stop** (keeps volumes) — use the same `-f` list you used for `up`:
 
@@ -68,9 +68,9 @@ docker compose -f Docker/docker-compose.yml down
 
 ## Configuration checklist
 
-1. **`.env` at repo root** — template: [`backend/.env.example`](../backend/.env.example). Inside Docker, `MONGODB_URI` / `REDIS_URL` are often overridden by Compose; still set **Plivo**, **`PUBLIC_BASE_URL`**, **`KAMAILIO_SIP_URI`**, **`RECORDINGS_DIR=/recordings`**, **`ESL_OUTBOUND_PORT=3200`** as needed.
+1. **`.env` at repo root** — template: [`backend/.env.example`](../../backend/.env.example). Inside Docker, `MONGODB_URI` / `REDIS_URL` are often overridden by Compose; still set **Plivo**, **`PUBLIC_BASE_URL`**, **`KAMAILIO_SIP_URI`**, **`RECORDINGS_DIR=/recordings`**, **`ESL_OUTBOUND_PORT=3200`** as needed.
 2. **`freeswitch/conf/vars.fs1.xml`** and **`vars.fs2.xml`** — set **`external_sip_ip`** to the server **public** IP (SDP / RTP).
-3. **Kamailio** — see [`kamailio/README.md`](../kamailio/README.md) (e.g. advertise address when required).
+3. **Kamailio** — see [`kamailio/README.md`](../../kamailio/README.md) (e.g. advertise address when required).
 
 ---
 
@@ -78,15 +78,16 @@ docker compose -f Docker/docker-compose.yml down
 
 | Layout | When to use |
 |--------|-------------|
-| **[`Docker/docker-compose.yml`](../Docker/docker-compose.yml)** | Default: **Kamailio + fs1 + fs2 + api + DBs** |
-| **[`Docker/docker-compose.drachtio.yml`](../Docker/docker-compose.drachtio.yml)** | **Overlay** for Flow B (merge after `docker-compose.yml`; Drachtio instead of Kamailio) |
+| **[`Docker/docker-compose.yml`](../../Docker/docker-compose.yml)** | Default: **Kamailio + fs1 + fs2 + api + DBs** |
+| **[`Docker/docker-compose.drachtio.yml`](../../Docker/docker-compose.drachtio.yml)** | **Overlay** for Flow B (merge after `docker-compose.yml`; Drachtio instead of Kamailio) |
 | **Root `docker-compose.server.yml` + `docker-compose.kamailio.yml`** | Same stack as Docker default, **two** files at repo root |
 
 ---
 
 ## Further reading
 
-- **[`Docker/README.md`](../Docker/README.md)** — Default `docker-compose.yml` and Flow B overlay.
-- **[telephony/kamailio.md](telephony/kamailio.md)** — Signaling, `KullooCallId`, failover behavior.
-- **[telephony/freeswitch.md](telephony/freeswitch.md)** — Multi-instance FS, RTP ranges, **`mrf`** context.
-- **[reference/api.md](reference/api.md)** — Health and REST surface.
+- **[`Docker/README.md`](../../Docker/README.md)** — Default `docker-compose.yml` and Flow B overlay.
+- **[../telephony/kamailio.md](../telephony/kamailio.md)** — Signaling, `KullooCallId`, failover behavior.
+- **[../telephony/freeswitch.md](../telephony/freeswitch.md)** — Multi-instance FS, RTP ranges, **`mrf`** context.
+- **[../reference/api.md](../reference/api.md)** — Health and REST surface.
+

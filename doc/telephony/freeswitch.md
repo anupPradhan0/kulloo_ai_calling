@@ -158,7 +158,7 @@ Firewall rules must allow **SIP** (UDP/TCP 5060) to Kamailio, **RTP** UDP ranges
 | [inbound-call-dataflow.md](./inbound-call-dataflow.md) | Inbound DID → Answer URL → FS → ESL → Mongo |
 | [outbound-calls.md](./outbound-calls.md) | Outbound API → Plivo → FS → ESL, `KullooCallId` |
 | [api.md](../reference/api.md) | HTTP routes, callbacks |
-| *stability.md* (not in repo yet) | Idempotency, timeouts, recovery — see [Documentation index](../README.md) |
+| [ops/stability.md](../ops/stability.md) | Idempotency, recovery loops, debugging checklist |
 
 **Backend:** `backend/src/server.ts` (ESL port), `backend/src/services/freeswitch/esl-call-handler.service.ts` (call flow).
 

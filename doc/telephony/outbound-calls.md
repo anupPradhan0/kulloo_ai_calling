@@ -249,7 +249,7 @@ During recording, ESL subscribes to DTMF events. Digit **`1`** stops recording e
 - [esl.md](./esl.md) — ESL concepts and data flow (FreeSWITCH → Kulloo)
 - [redis.md](../reference/redis.md) — required Redis (outbound idempotency cache, webhook dedupe, health)
 - [hello-call-contract.md](../product/hello-call-contract.md) — hello contracts (outbound + real inbound via FS)
-- *stability.md* — not in repo yet; see [Documentation index](../README.md)
+- [ops/stability.md](../ops/stability.md) — operational stability, recovery loops, debugging checklist
 
 ---
 

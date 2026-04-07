@@ -159,7 +159,7 @@ Started from `server.ts`:
 | **Orphan call sweep** (`ORPHAN_GRACE_MS`, `ORPHAN_SWEEP_INTERVAL_MS`) | Marks stale non-terminal calls (e.g. backend restarted mid-call) |
 | **Recordings sync** (`RECORDINGS_SYNC_GRACE_MS`, `RECORDINGS_SYNC_INTERVAL_MS`) | Backfills `Recording` rows from WAV files on disk |
 
-A dedicated stability checklist doc is not in the repo yet; see the [Documentation index](../README.md) and related telephony/reference pages for idempotency, webhooks, ESL, and observability.
+Stability and operations notes live in [../ops/stability.md](../ops/stability.md).
 
 ### Redis (`REDIS_URL`, required)
 
