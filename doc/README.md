@@ -84,6 +84,7 @@ In the markdown files below this README, **relative links** are from each fileâ€
 
 | Document | Description |
 |----------|-------------|
+| [repository-root-map.md](repository-root-map.md) | Repo-root map: what each top-level folder/file is for (AI-friendly; links to backend doc). |
 | [backend/backend-folder-structure.md](backend/backend-folder-structure.md) | Full `backend/` tree and contributor rules for new code. |
 
 ## Flows
