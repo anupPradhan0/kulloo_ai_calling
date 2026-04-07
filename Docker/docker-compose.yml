@@ -1,6 +1,8 @@
-# Kuloo — production stack (single file)
+# Kuloo — default production stack (Flow A: Kamailio + FreeSWITCH + ESL)
 # Run from repository root:
-#   docker compose -f Docker/docker-compose.prod.yml up -d --build
+#   docker compose -f Docker/docker-compose.yml up -d --build
+#
+# Flow B (Drachtio instead of Kamailio): merge docker-compose.drachtio.yml — see that file.
 #
 # Paths in this file are relative to this file's directory (Docker/), so ../ = repo root.
 

@@ -37,7 +37,7 @@ From the **repository root** after cloning:
 cp backend/.env.example .env
 # Edit .env: secrets, PLIVO_*, PUBLIC_BASE_URL, KAMAILIO_SIP_URI (public host:5060), etc.
 
-docker compose -f Docker/docker-compose.prod.yml up -d --build
+docker compose -f Docker/docker-compose.yml up -d --build
 ```
 
 Verify:
@@ -47,10 +47,21 @@ curl -sS http://127.0.0.1:5000/api/health
 docker exec kulloo-kamailio kamctl dispatcher show
 ```
 
-**Stop** (keeps volumes):
+**Drachtio (Flow B)** — separate overlay in the same folder; does not replace the default file:
 
 ```bash
-docker compose -f Docker/docker-compose.prod.yml down
+docker compose \
+  -f Docker/docker-compose.yml \
+  -f Docker/docker-compose.drachtio.yml \
+  up -d --build
+```
+
+Set **`FREESWITCH_SIP_URI`** in `.env` for that path. See [telephony/drachtio.md](telephony/drachtio.md).
+
+**Stop** (keeps volumes) — use the same `-f` list you used for `up`:
+
+```bash
+docker compose -f Docker/docker-compose.yml down
 ```
 
 ---
@@ -67,16 +78,15 @@ docker compose -f Docker/docker-compose.prod.yml down
 
 | Layout | When to use |
 |--------|-------------|
-| **[`Docker/docker-compose.prod.yml`](../Docker/docker-compose.prod.yml)** | Single file, **Kamailio + fs1 + fs2 + api + DBs** (recommended in `Docker/README.md`) |
-| **Root `docker-compose.server.yml` + `docker-compose.kamailio.yml`** | Same stack, **two** compose invocations (see comments in those files) |
-| **`Docker/docker-compose.dev.yml`** | Local **Mongo + Redis + one FS**; run API on host with `pnpm dev` |
+| **[`Docker/docker-compose.yml`](../Docker/docker-compose.yml)** | Default: **Kamailio + fs1 + fs2 + api + DBs** |
+| **[`Docker/docker-compose.drachtio.yml`](../Docker/docker-compose.drachtio.yml)** | **Overlay** for Flow B (merge after `docker-compose.yml`; Drachtio instead of Kamailio) |
+| **Root `docker-compose.server.yml` + `docker-compose.kamailio.yml`** | Same stack as Docker default, **two** files at repo root |
 
 ---
 
 ## Further reading
 
-- **[`Docker/README.md`](../Docker/README.md)** — Commands, troubleshooting, dev/redis-only compose, port recap.
-- **[`Docker/DEPLOYMENT-REFERENCE.md`](../Docker/DEPLOYMENT-REFERENCE.md)** — How Kulloo’s Docker topology compares to a large multi-service CPaaS layout.
+- **[`Docker/README.md`](../Docker/README.md)** — Default `docker-compose.yml` and Flow B overlay.
 - **[telephony/kamailio.md](telephony/kamailio.md)** — Signaling, `KullooCallId`, failover behavior.
 - **[telephony/freeswitch.md](telephony/freeswitch.md)** — Multi-instance FS, RTP ranges, **`mrf`** context.
 - **[reference/api.md](reference/api.md)** — Health and REST surface.

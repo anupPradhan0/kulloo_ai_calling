@@ -16,7 +16,7 @@ Kulloo is a **TypeScript/Node calling backend**: an **Express** API, **MongoDB**
 |------|------|
 | [`backend/`](../backend/) | Main API package — layout and conventions: [backend/backend-folder-structure.md](backend/backend-folder-structure.md). |
 | [`freeswitch/`](../freeswitch/) | Checked-in FreeSWITCH configuration (dialplan, modules, vars). |
-| [`Docker/`](../Docker/) | **Production Docker**: merged `docker-compose.prod.yml`, dev/redis helpers, deploy guide ([Docker/README.md](../Docker/README.md)), stack notes ([Docker/DEPLOYMENT-REFERENCE.md](../Docker/DEPLOYMENT-REFERENCE.md)). |
+| [`Docker/`](../Docker/) | **Production Docker**: [`docker-compose.yml`](../Docker/docker-compose.yml) (default Kamailio stack), [`docker-compose.drachtio.yml`](../Docker/docker-compose.drachtio.yml) (Flow B overlay), deploy guide ([Docker/README.md](../Docker/README.md)). |
 | Root `docker-compose*.yml` | Example stacks for API, Redis, Mongo, FreeSWITCH / server + Kamailio (alternate to `Docker/`). |
 
 **Server deployment (operators):** [deployment.md](deployment.md) — quick path to production Compose and checklist; deep detail in [`Docker/README.md`](../Docker/README.md).

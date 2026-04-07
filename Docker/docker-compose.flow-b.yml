@@ -1,0 +1,159 @@
+# Kuloo — Flow B production stack (single file)
+# Run from repository root:
+#   docker compose -f Docker/docker-compose.flow-b.yml up -d --build
+#
+# SIP signaling: Drachtio on :5060. Node api attaches via command socket :9022.
+# RTP: Plivo ↔ FreeSWITCH directly (Drachtio does not carry audio).
+#
+# Paths in this file are relative to this file's directory (Docker/), so ../ = repo root.
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: kulloo-mongodb
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: sip-backend
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - kulloo_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: kulloo-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - kulloo_net
+
+  drachtio:
+    image: drachtio/drachtio-server:latest
+    container_name: kulloo-drachtio
+    restart: unless-stopped
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      # Command socket — Node.js srf.connect() attaches here (NOT exposed to internet)
+      - "127.0.0.1:9022:9022/tcp"
+    environment:
+      DRACHTIO_LOG_LEVEL: ${DRACHTIO_LOG_LEVEL:-info}
+      DRACHTIO_SECRET: ${DRACHTIO_SECRET:-kulloo-drachtio-secret}
+    networks:
+      - kulloo_net
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tlnp 2>/dev/null | grep -q ':9022' || ss -tlnp | grep -q ':9022'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
+    image: kulloo-backend:local
+    container_name: kulloo-api
+    hostname: api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+      # ESL outbound: ALL FreeSWITCH instances (fs1, fs2) connect to this port
+      - "3200:3200"
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      MONGODB_URI: mongodb://mongodb:27017/sip-backend
+      RECORDINGS_DIR: /recordings
+      REDIS_URL: redis://redis:6379
+      ESL_OUTBOUND_PORT: "3200"
+      # Flow B activation
+      CALL_CONTROL_BACKEND: drachtio
+      DRACHTIO_HOST: drachtio
+      DRACHTIO_PORT: "9022"
+      DRACHTIO_SECRET: ${DRACHTIO_SECRET:-kulloo-drachtio-secret}
+    volumes:
+      - recordings_data:/recordings
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      drachtio:
+        condition: service_started
+    networks:
+      - kulloo_net
+
+  fs1:
+    image: signalwire/freeswitch:v1.10
+    container_name: kulloo-fs1
+    hostname: fs1
+    restart: unless-stopped
+    ports:
+      - "5070:5070/udp"
+      - "5070:5070/tcp"
+      - "8021:8021/tcp"
+      - "16384-17383:16384-17383/udp"
+    volumes:
+      - ../freeswitch/conf:/etc/freeswitch:ro
+      - ../freeswitch/conf/vars.fs1.xml:/etc/freeswitch/vars.xml:ro
+      - recordings_data:/recordings
+    environment:
+      FS_INSTANCE: fs1
+    networks:
+      - kulloo_net
+    depends_on:
+      - api
+
+  fs2:
+    image: signalwire/freeswitch:v1.10
+    container_name: kulloo-fs2
+    hostname: fs2
+    restart: unless-stopped
+    ports:
+      - "5071:5070/udp"
+      - "5071:5070/tcp"
+      - "8022:8021/tcp"
+      - "17384-18383:17384-18383/udp"
+    volumes:
+      - ../freeswitch/conf:/etc/freeswitch:ro
+      - ../freeswitch/conf/vars.fs2.xml:/etc/freeswitch/vars.xml:ro
+      - recordings_data:/recordings
+    environment:
+      FS_INSTANCE: fs2
+    networks:
+      - kulloo_net
+    depends_on:
+      - api
+
+volumes:
+  mongodb_data:
+  redis_data:
+  recordings_data:
+
+networks:
+  kulloo_net:
+    name: kulloo_net
+    driver: bridge
+

@@ -217,11 +217,22 @@ In Flow B, `srf.proxyRequest(req, target, { remainInDialog: true })` achieves th
 
 ## 9. Running Flow B
 
+**`Docker/` default stack + Drachtio overlay** (from repo root — your usual Kamailio compose stays the base file):
+
 ```bash
-# Pull the drachtio server image
 docker pull drachtio/drachtio-server:latest
 
-# Start Flow B stack (core services + drachtio overlay)
+docker compose \
+  -f Docker/docker-compose.yml \
+  -f Docker/docker-compose.drachtio.yml \
+  up -d --build
+
+# Do not enable Kamailio’s profile while using this overlay (port 5060 conflict).
+```
+
+**Repo-root alternate** (same idea as `docker-compose.server.yml` + overlay):
+
+```bash
 docker compose \
   -f docker-compose.server.yml \
   -f docker-compose.drachtio.yml \
@@ -230,7 +241,7 @@ docker compose \
 # Do NOT add docker-compose.kamailio.yml — Kamailio is not used in Flow B.
 ```
 
-**Update Plivo:** Point your Plivo application's SIP Destination to `sip:1000@<your-host>:5060` (the drachtio container) instead of Kamailio.
+**Update Plivo:** Point your Plivo application's SIP Destination to `sip:1000@<your-host>:5060` (Drachtio) instead of Kamailio.
 
 ---
 
@@ -247,7 +258,7 @@ docker compose \
 | Bootstrap wiring | `backend/src/server.ts` |
 | Env vars | `backend/src/config/env.ts` |
 | Type declarations | `backend/src/types/drachtio.d.ts` |
-| Docker compose | `docker-compose.drachtio.yml` |
+| Docker compose | `Docker/docker-compose.drachtio.yml` (merge with `Docker/docker-compose.yml`); or root `docker-compose.drachtio.yml` + `docker-compose.server.yml` |
 
 ---
 
