@@ -110,7 +110,7 @@ Rough order inside **`executeCallFlow`** (see [`esl-call-handler.service.ts`](..
 6. **`record_session`** to `{RECORDINGS_DIR}/{uuid}.wav`
 7. Wait for **DTMF 1** (early stop) or **sleep** up to ~20s
 8. **`stop_record_session`**
-9. **`handleRecordingComplete`** (file stat, mark recording **completed** / events)
+9. **`handleRecordingComplete`** (file stat, mark recording **recorded**, then **upload to S3** when configured)
 10. Optional confirm tone if DTMF 1
 11. **`hangup`**, then **`completed`** on the call
 

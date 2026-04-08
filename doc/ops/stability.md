@@ -91,6 +91,15 @@ See: [../telephony/kamailio.md](../telephony/kamailio.md), [../telephony/freeswi
 - Recording stopped too early or FS couldn’t write to `RECORDINGS_DIR`.
 - Backend and FS not sharing the same recordings volume/path.
 
+### 5.5 Recording is not playable immediately after hangup
+
+If you click play immediately after a call ends, the recording may still be transitioning:
+
+- `status: uploading`: the API will still serve the **local** WAV (if `filePath` exists) until S3 upload completes.
+- `status: completed` + S3 metadata present: `GET /api/recordings/:recordingId/file` will **302 redirect** to a pre-signed S3 URL.
+
+If S3 upload failed, status becomes `failed` and the local WAV is intentionally kept (if present) to allow manual recovery.
+
 ### 5.5 Duplicate call rows or duplicate callback ingestion
 
 - Ensure `Idempotency-Key` is always set for outbound create.

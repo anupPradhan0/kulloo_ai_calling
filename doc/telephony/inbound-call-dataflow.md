@@ -72,7 +72,7 @@ sequenceDiagram
     ESL->>FS: answer, sleep, playback, record_session, DTMF, stop_record, hangup
   end
 
-  ESL->>Mongo: Call status + CallEvents + Recording (pending → completed/failed)
+  ESL->>Mongo: Call status + CallEvents + Recording (pending → recorded → uploading → completed/failed)
 ```
 
 ---
@@ -148,7 +148,7 @@ File: `backend/src/services/freeswitch/esl-call-handler.service.ts`.
 ### `Recording`
 
 - **`providerRecordingId`**: same as FS UUID (WAV basename).
-- **`status`**: `pending` when recording starts; **`completed`** after **`handleRecordingComplete`** confirms file size **> 44 bytes** (non-empty WAV), else **`failed`** with a `recording_failed` event.
+- **`status`**: `pending` when recording starts; then **`recorded`** after **`handleRecordingComplete`** confirms file size **> 44 bytes** (non-empty WAV). If S3 is configured it transitions `uploading → completed` and deletes the local WAV. Failures end in **`failed`** with a `recording_failed` event.
 
 ### `Users`
 

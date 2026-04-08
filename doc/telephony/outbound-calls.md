@@ -196,6 +196,7 @@ Unique indexes (see `call.model.ts`):
 
 - **`CallEvent`:** `pushEvent` records `initiated`, `connected`, `answered`, `played`, `recording_started`, DTMF, `hangup`, `completed`, `failed`, etc. Uses `call.correlationId` on the event row.
 - **`Recording`:** For Plivo+FS hello, primary path is **FS file** + ESL **`handleRecordingComplete`**. `providerRecordingId` is often the **FS UUID**; `callId` references the `Call` document. Retrieval may use `/api/recordings/local/:uuid` when served from disk.
+  - When S3 is configured, recordings transition: `pending → recorded → uploading → completed` and the local WAV is deleted after upload. `/api/recordings/:recordingId/file` will then redirect to a pre-signed S3 URL.
 
 **Recording webhooks and Redis:** `POST /api/calls/callbacks/twilio/recording`, `…/plivo/recording`, and `…/freeswitch/recording` use **Redis dedupe** (`SET … NX` + TTL), so provider retries return **`200`** with `{ duplicate: true }` without double ingestion.
 

@@ -10,6 +10,8 @@ All routes below are relative to the base URL.
 
 **ESL** (Event Socket: FreeSWITCH → Kulloo on `ESL_OUTBOUND_PORT`) drives the hello media flow; see [esl.md](../telephony/esl.md).
 
+**Recordings storage:** local WAV + optional S3 offload is documented in [recordings-storage.md](./recordings-storage.md).
+
 ## Health
 
 - `GET /api/health/live`
@@ -59,7 +61,8 @@ Full outbound (Plivo → Kamailio → FreeSWITCH pool → ESL) architecture and 
 - `GET /api/recordings/:recordingId`
   - Returns recording metadata from MongoDB
 - `GET /api/recordings/:recordingId/file`
-  - Streams recording file if `filePath` exists in MongoDB
+  - **If uploaded to S3**: responds with **HTTP 302 redirect** to a short-lived **pre-signed S3 URL**
+  - **If still local** (including while upload is in progress): streams the local WAV when `filePath` exists in MongoDB
 
 ## Plivo XML application webhooks
 

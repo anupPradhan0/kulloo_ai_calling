@@ -153,6 +153,8 @@ backend/
     │       ├── idempotency-cache.service.ts
     │       ├── redis.client.ts
     │       └── webhook-dedupe.service.ts
+    │   └── storage/
+    │       └── s3.service.ts
     ├── types/
     │   ├── drachtio.d.ts
     │   └── express.d.ts
