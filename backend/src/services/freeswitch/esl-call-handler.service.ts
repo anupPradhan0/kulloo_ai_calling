@@ -16,6 +16,11 @@ import { metrics } from "../observability/metrics.service";
 import { logger, serializeError } from "../../utils/logger";
 import type { AgentWsService } from "../agent/agent-ws.service";
 import { env } from "../../config/env";
+import {
+  buildDatePartitionedRecordingKey,
+  isS3Enabled,
+  uploadWavToS3,
+} from "../storage/s3.service";
 
 /** Constructor options for the ESL TCP server: listen address, port, and where WAV files are written. */
 export interface EslCallHandlerOptions {
@@ -775,9 +780,9 @@ export class EslCallHandlerService {
       const retrievalUrl = `/api/recordings/local/${providerRecordingId}`;
       const existingRec = await this.callService.findRecordingDocumentByProviderRecordingId(providerRecordingId);
       if (existingRec) {
-        await this.callService.updateRecordingDocument(existingRec._id.toString(), { status: "pending", filePath: recordingPath, retrievalUrl });
+        await this.callService.updateRecordingDocument(existingRec._id.toString(), { status: "pending", storage: "local", filePath: recordingPath, retrievalUrl });
       } else {
-        await this.callService.createRecordingDocument({ callId: call._id, provider: "freeswitch", providerRecordingId, status: "pending", filePath: recordingPath, retrievalUrl });
+        await this.callService.createRecordingDocument({ callId: call._id, provider: "freeswitch", providerRecordingId, status: "pending", storage: "local", filePath: recordingPath, retrievalUrl });
       }
       conn.execute("record_session", recordingPath, () => {});
       this.log(ctx, "info", `[agent-bridge] Recording started: ${recordingPath}`);
@@ -964,6 +969,7 @@ export class EslCallHandlerService {
       if (existingRecording) {
         await this.callService.updateRecordingDocument(existingRecording._id.toString(), {
           status: "pending",
+          storage: "local",
           filePath: recordingPath,
           retrievalUrl,
         });
@@ -973,6 +979,7 @@ export class EslCallHandlerService {
           provider: "freeswitch",
           providerRecordingId,
           status: "pending",
+          storage: "local",
           filePath: recordingPath,
           retrievalUrl,
         });
@@ -1083,6 +1090,7 @@ export class EslCallHandlerService {
         if (existing) {
           await this.callService.updateRecordingDocument(existing._id.toString(), {
             status: "failed",
+            storage: "local",
             filePath,
             retrievalUrl: `/api/recordings/local/${callUuid}`,
           });
@@ -1092,6 +1100,7 @@ export class EslCallHandlerService {
             provider: "freeswitch",
             providerRecordingId: callUuid,
             status: "failed",
+            storage: "local",
             filePath,
             retrievalUrl: `/api/recordings/local/${callUuid}`,
           });
@@ -1110,7 +1119,8 @@ export class EslCallHandlerService {
       }
 
       const patch = {
-        status: "completed" as const,
+        status: "recorded" as const,
+        storage: "local" as const,
         durationSec: 20,
         filePath,
         retrievalUrl: `/api/recordings/local/${callUuid}`,
@@ -1122,7 +1132,8 @@ export class EslCallHandlerService {
             callId: call._id,
             provider: "freeswitch",
             providerRecordingId: callUuid,
-            status: "completed",
+            status: "recorded",
+            storage: "local",
             durationSec: 20,
             filePath,
             retrievalUrl: `/api/recordings/local/${callUuid}`,
@@ -1135,6 +1146,37 @@ export class EslCallHandlerService {
           "Failed to upsert recording metadata",
         );
         return;
+      }
+
+      // If S3 is configured, upload after finalizing the local WAV.
+      if (isS3Enabled()) {
+        const s3Key = buildDatePartitionedRecordingKey({ callUuid, at: new Date() });
+        const location = { bucket: env.s3Bucket!, key: s3Key, region: env.s3Region! };
+
+        await this.callService.updateRecordingDocument(recording._id.toString(), {
+          status: "uploading",
+          storage: "local",
+          s3Bucket: location.bucket,
+          s3Key: location.key,
+          s3Region: location.region,
+        });
+
+        await uploadWavToS3({ localPath: filePath, location });
+
+        await this.callService.updateRecordingDocument(recording._id.toString(), {
+          status: "completed",
+          storage: "s3",
+          uploadedAt: new Date(),
+          // Once uploaded, prefer the canonical file endpoint which will redirect to a pre-signed URL.
+          retrievalUrl: `/api/recordings/${recording._id.toString()}/file`,
+        });
+
+        // Delete local file after successful upload.
+        try {
+          await fs.unlink(filePath);
+        } catch (err) {
+          this.log({ correlationId: call.correlationId, callId: call._id.toString(), uuid: callUuid }, "error", "Failed to delete local WAV after S3 upload", err);
+        }
       }
 
       // Only emit completion event once (avoid duplicates on retries).

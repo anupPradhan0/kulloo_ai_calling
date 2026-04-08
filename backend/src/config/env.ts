@@ -136,6 +136,26 @@ export const env = {
    * STUN server returned to sip.js for WebRTC ICE negotiation.
    */
   stunServerUrl: process.env.STUN_SERVER_URL?.trim() || "stun:stun.l.google.com:19302",
+
+  // ---------------------------------------------------------------------------
+  // Recording storage (local + optional S3 offload)
+  // ---------------------------------------------------------------------------
+  /**
+   * S3 region (required when using S3).
+   */
+  s3Region: process.env.S3_REGION?.trim() || undefined,
+  /**
+   * S3 bucket name (required when using S3).
+   */
+  s3Bucket: process.env.S3_BUCKET?.trim() || undefined,
+  /**
+   * Optional prefix inside the bucket (no leading/trailing slashes).
+   */
+  s3Prefix: process.env.S3_PREFIX?.trim() || undefined,
+  /**
+   * Pre-signed URL TTL for playback/download.
+   */
+  s3PresignTtlSec: parseIntEnv("S3_PRESIGN_TTL_SEC", 300),
 };
 
 /**

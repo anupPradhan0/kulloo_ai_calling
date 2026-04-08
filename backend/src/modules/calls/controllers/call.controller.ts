@@ -8,6 +8,8 @@ import { NextFunction, Request, Response } from "express";
 import path from "node:path";
 import { ApiError } from "../../../utils/api-error";
 import { parseWithSchema } from "../../../utils/zod-validate";
+import { getPresignedRecordingGetUrl } from "../../../services/storage/s3.service";
+import { env } from "../../../config/env";
 import {
   callIdParamSchema,
   callListQuerySchema,
@@ -138,11 +140,31 @@ export async function getRecordingFile(req: Request, res: Response, next: NextFu
     const { recordingId } = parseWithSchema(recordingIdParamSchema, req.params);
     const recording = await callService.getRecordingById(recordingId);
 
-    if (!recording.filePath) {
-      throw new ApiError("Recording file is not available", 404);
+    const status = recording.status;
+    const hasS3 = Boolean(recording.s3Bucket && recording.s3Key && recording.s3Region);
+
+    // Race condition handling:
+    // - If user clicks play while upload is running, stream local filePath when available.
+    // - Prefer S3 once completed and S3 metadata exists.
+    if (hasS3 && status === "completed") {
+      const url = await getPresignedRecordingGetUrl({
+        location: {
+          bucket: recording.s3Bucket!,
+          key: recording.s3Key!,
+          region: recording.s3Region!,
+        },
+        expiresInSec: env.s3PresignTtlSec,
+      });
+      res.redirect(302, url);
+      return;
     }
 
-    res.sendFile(path.resolve(recording.filePath));
+    if (recording.filePath) {
+      res.sendFile(path.resolve(recording.filePath));
+      return;
+    }
+
+    throw new ApiError("Recording file is not available", 404);
   } catch (error) {
     next(error);
   }

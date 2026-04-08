@@ -77,7 +77,6 @@ In the markdown files below this README, **relative links** are from each fileâ€
 
 | Document | Description |
 |----------|-------------|
-| [product/requirements.md](product/requirements.md) | Platform vision, scope, phases, high-level data model (CPaaS-style reference patterns). |
 | [product/hello-call-contract.md](product/hello-call-contract.md) | Hello-call API, recording contract, acceptance-style notes. |
 
 ## Backend codebase

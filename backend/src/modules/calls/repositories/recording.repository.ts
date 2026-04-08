@@ -72,7 +72,16 @@ export class RecordingRepository {
     patch: Partial<
       Pick<
         RecordingDocument,
-        "providerRecordingId" | "status" | "durationSec" | "retrievalUrl" | "filePath"
+        | "providerRecordingId"
+        | "status"
+        | "storage"
+        | "durationSec"
+        | "retrievalUrl"
+        | "filePath"
+        | "s3Bucket"
+        | "s3Key"
+        | "s3Region"
+        | "uploadedAt"
       >
     >,
   ): Promise<RecordingDocument | null> {

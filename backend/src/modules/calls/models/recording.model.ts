@@ -7,7 +7,10 @@
 import { model, Schema, Types } from "mongoose";
 import { CallProvider } from "./call.model";
 
-export type RecordingStatus = "pending" | "completed" | "failed";
+// NOTE: "pending" is legacy but kept for backward compatibility with existing rows.
+export type RecordingStatus = "pending" | "recorded" | "uploading" | "completed" | "failed";
+
+export type RecordingStorage = "local" | "s3";
 
 export interface RecordingDocument {
   _id: Types.ObjectId;
@@ -15,9 +18,14 @@ export interface RecordingDocument {
   provider: CallProvider;
   providerRecordingId: string;
   status: RecordingStatus;
+  storage?: RecordingStorage;
   durationSec?: number;
   retrievalUrl?: string;
   filePath?: string;
+  s3Bucket?: string;
+  s3Key?: string;
+  s3Region?: string;
+  uploadedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,10 +35,15 @@ const recordingSchema = new Schema<RecordingDocument>(
     callId: { type: Schema.Types.ObjectId, ref: "Call", required: true, index: true },
     provider: { type: String, enum: ["sip-local", "twilio", "plivo", "freeswitch"], required: true },
     providerRecordingId: { type: String, required: true, unique: true, index: true },
-    status: { type: String, enum: ["pending", "completed", "failed"], default: "pending" },
+    status: { type: String, enum: ["pending", "recorded", "uploading", "completed", "failed"], default: "pending" },
+    storage: { type: String, enum: ["local", "s3"] },
     durationSec: { type: Number },
     retrievalUrl: { type: String },
     filePath: { type: String },
+    s3Bucket: { type: String },
+    s3Key: { type: String },
+    s3Region: { type: String },
+    uploadedAt: { type: Date },
   },
   { timestamps: true },
 );
