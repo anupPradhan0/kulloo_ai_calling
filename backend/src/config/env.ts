@@ -105,6 +105,37 @@ export const env = {
    * Used in logs and documentation only; the port mapping itself is in docker-compose.drachtio.yml.
    */
   drachtioSipPort: parseIntEnv("DRACHTIO_SIP_PORT", 5060),
+  // ---------------------------------------------------------------------------
+  // Agent WebRTC softphone (opt-in via AGENT_MODE=webrtc)
+  // Default is "hello" which keeps the existing IVR beep/record/hangup script.
+  // ---------------------------------------------------------------------------
+  /**
+   * "hello"  → existing IVR script (default, no change).
+   * "webrtc" → bridge inbound call to agent's sip.js WebRTC endpoint.
+   */
+  agentMode: (process.env.AGENT_MODE?.trim() || "hello") as "hello" | "webrtc",
+  /**
+   * FreeSWITCH WSS URL returned to the frontend so sip.js knows where to register.
+   * Example: wss://yourdomain.com:7443
+   */
+  freeswitchWssUrl: process.env.FREESWITCH_WSS_URL?.trim() || "wss://localhost:7443",
+  /**
+   * FreeSWITCH SIP domain used in bridge(user/agentX@domain).
+   * Must match the domain configured in FreeSWITCH sip_profiles.
+   */
+  freeswitchDomain: process.env.FREESWITCH_DOMAIN?.trim() || "kulloo.local",
+  /**
+   * SIP username for the agent (must match freeswitch/directory/default/agentX.xml).
+   */
+  agentSipUsername: process.env.AGENT_SIP_USERNAME?.trim() || "agent1",
+  /**
+   * SIP password for the agent (must match freeswitch/directory/default/agentX.xml).
+   */
+  agentSipPassword: process.env.AGENT_SIP_PASSWORD?.trim() || "agent123",
+  /**
+   * STUN server returned to sip.js for WebRTC ICE negotiation.
+   */
+  stunServerUrl: process.env.STUN_SERVER_URL?.trim() || "stun:stun.l.google.com:19302",
 };
 
 /**

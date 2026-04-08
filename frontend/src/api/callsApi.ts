@@ -85,3 +85,38 @@ export async function placeOutboundHello(
 export function getDefaultBaseUrl(): string {
   return DEFAULT_API_BASE_URL
 }
+
+// ─── Agent softphone API ──────────────────────────────────────────────────────
+
+export type AgentCredentials = {
+  wssUrl: string
+  domain: string
+  username: string
+  password: string
+  stunServer: string
+}
+
+export async function fetchAgentCredentials(baseUrl: string): Promise<AgentCredentials> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/credentials`
+  const res = await fetch(url)
+  const text = await res.text()
+  if (!res.ok) throw new Error(text || `${res.status} ${res.statusText}`)
+  const json = JSON.parse(text) as { success: boolean; data: AgentCredentials }
+  return json.data
+}
+
+export async function setAgentStatus(
+  baseUrl: string,
+  status: 'available' | 'offline',
+): Promise<void> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/status`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || `${res.status} ${res.statusText}`)
+  }
+}

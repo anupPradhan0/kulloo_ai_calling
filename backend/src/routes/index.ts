@@ -8,6 +8,7 @@ import { Router } from "express";
 import { healthRouter } from "../modules/health/routes/health.routes";
 import { metricsRouter } from "./metrics.routes";
 import { callRouter, recordingRouter } from "../modules/calls/routes/call.routes";
+import { agentRouter } from "../modules/agent/routes/agent.routes";
 
 /** Root router mounted at /api in app.ts. */
 export const apiRouter = Router();
@@ -16,3 +17,4 @@ apiRouter.use("/health", healthRouter);
 apiRouter.use("/metrics", metricsRouter);
 apiRouter.use("/calls", callRouter);
 apiRouter.use("/recordings", recordingRouter);
+apiRouter.use("/agent", agentRouter);

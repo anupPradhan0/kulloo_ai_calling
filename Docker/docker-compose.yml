@@ -65,6 +65,12 @@ services:
       RECORDINGS_DIR: /recordings
       REDIS_URL: redis://redis:6379
       ESL_OUTBOUND_PORT: "3200"
+      # Agent WebRTC softphone — override via ../.env or environment
+      # AGENT_MODE: webrtc
+      # FREESWITCH_WSS_URL: wss://yourdomain.com:7443
+      # FREESWITCH_DOMAIN: yourdomain.com
+      # AGENT_SIP_USERNAME: agent1
+      # AGENT_SIP_PASSWORD: agent123
     volumes:
       - recordings_data:/recordings
     depends_on:
@@ -85,10 +91,15 @@ services:
       - "5070:5070/tcp"
       - "8021:8021/tcp"
       - "16384-17383:16384-17383/udp"
+      # WebRTC (sip.js browser softphone) — see freeswitch/README-tls.md for TLS setup
+      - "7443:7443/tcp"    # WSS — browser sip.js registers here
+      - "5066:5066/tcp"    # plain WS (optional fallback)
     volumes:
       - ../freeswitch/conf:/etc/freeswitch:ro
       - ../freeswitch/conf/vars.fs1.xml:/etc/freeswitch/vars.xml:ro
       - recordings_data:/recordings
+      # TLS certs for WSS — mount certbot certs here (see freeswitch/README-tls.md)
+      - ../freeswitch/tls:/etc/freeswitch/tls:ro
     environment:
       FS_INSTANCE: fs1
     networks:

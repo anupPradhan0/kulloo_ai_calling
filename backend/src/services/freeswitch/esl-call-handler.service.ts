@@ -14,6 +14,8 @@ import { toE164BestEffort } from "../../utils/phone-normalize";
 import fs from "node:fs/promises";
 import { metrics } from "../observability/metrics.service";
 import { logger, serializeError } from "../../utils/logger";
+import type { AgentWsService } from "../agent/agent-ws.service";
+import { env } from "../../config/env";
 
 /** Constructor options for the ESL TCP server: listen address, port, and where WAV files are written. */
 export interface EslCallHandlerOptions {
@@ -21,6 +23,8 @@ export interface EslCallHandlerOptions {
   host?: string;
   recordingsDir?: string;
   mediaServer?: null;
+  /** Optional AgentWsService — required when AGENT_MODE=webrtc to broadcast call events to the browser. */
+  agentWs?: AgentWsService | null;
 }
 
 /** Manages the modesl server, per-connection hello script, and coordination with orphan recovery via active channel tracking. */
@@ -33,6 +37,8 @@ export class EslCallHandlerService {
   /** Absolute path; same base for FS `record_session`, Node `stat`, and DB `filePath`. */
   private readonly recordingsBase: string;
   private readonly activeProviderCallIds = new Set<string>();
+  /** Optional reference to broadcast real-time call events to connected agent browsers. */
+  private agentWs: AgentWsService | null = null;
 
   private log(
     ctx: { correlationId?: string; callId?: string; uuid?: string } | null,
@@ -389,15 +395,14 @@ export class EslCallHandlerService {
     };
   }
 
-  /**
-   * Stores listen configuration and constructs CallService used for all database updates from this handler.
-   */
+  /** Stores listen configuration and constructs CallService used for all database updates from this handler. */
   constructor(options: EslCallHandlerOptions) {
     this.port = options.port;
     this.host = options.host || "0.0.0.0";
     this.recordingsDir = options.recordingsDir || "/recordings";
     this.recordingsBase = path.resolve(this.recordingsDir);
     this.callService = new CallService();
+    this.agentWs = options.agentWs ?? null;
   }
 
   /**
@@ -642,10 +647,206 @@ export class EslCallHandlerService {
   }
 
   /**
-   * Core hello script: attach or create Call, answer, play tone, record WAV, optional DTMF early stop, finalize recording metadata, hang up.
-   * @returns Mongo call id string and filesystem path to the WAV for logging; throws on unrecoverable ESL errors after failAndHangup attempt.
+   * Core call flow dispatcher: routes to the WebRTC agent bridge or the hello IVR script based on AGENT_MODE.
+   * @returns Mongo call id string and filesystem path to the WAV for logging; throws on unrecoverable ESL errors.
    */
   private async executeCallFlow(
+    conn: Connection,
+    input: {
+      callUuid: string;
+      fromRaw: string | null;
+      toRaw: string | null;
+      fromE164?: string;
+      toE164?: string;
+      callerName?: string;
+      kullooCallId?: string | null;
+    },
+  ): Promise<{ callId: string; recordingPath: string }> {
+    if (env.agentMode === "webrtc") {
+      return this.executeAgentBridgeFlow(conn, input);
+    }
+    return this.executeHelloFlow(conn, input);
+  }
+
+  /**
+   * WebRTC agent bridge flow (AGENT_MODE=webrtc):
+   * Answers the channel, starts recording, bridges to the registered agent sip.js endpoint.
+   * The call stays bridged until either party hangs up.
+   */
+  private async executeAgentBridgeFlow(
+    conn: Connection,
+    input: {
+      callUuid: string;
+      fromRaw: string | null;
+      toRaw: string | null;
+      fromE164?: string;
+      toE164?: string;
+      callerName?: string;
+      kullooCallId?: string | null;
+    },
+  ): Promise<{ callId: string; recordingPath: string }> {
+    try {
+      const from = input.fromE164 ?? input.fromRaw ?? "unknown";
+      const to   = input.toE164   ?? input.toRaw   ?? "unknown";
+      this.log(null, "info", `[agent-bridge] Executing agent bridge flow for ${input.callUuid} (${from} -> ${to})`);
+
+      const now = new Date();
+      const correlationId = randomUUID();
+
+      // ---- 1. Find or create Mongo Call doc (same logic as hello flow) ----
+      let call: CallDocument | null = null;
+      let created = false;
+      const kullooCallId = input.kullooCallId && typeof input.kullooCallId === "string" ? input.kullooCallId : null;
+
+      if (kullooCallId && /^[a-fA-F0-9]{24}$/.test(kullooCallId)) {
+        const existing = await this.callService.findCallDocumentByStableCallId(kullooCallId);
+        if (existing) {
+          const updated = await this.callService.updateCallDocument(existing._id.toString(), {
+            provider: "freeswitch",
+            providerCallId: input.callUuid,
+            direction: "outbound",
+            from: existing.from,
+            to: existing.to,
+            fromRaw: input.fromRaw ?? existing.fromRaw,
+            toRaw: input.toRaw ?? existing.toRaw,
+            fromE164: input.fromE164 ?? existing.fromE164,
+            toE164: existing.toE164 ?? input.toE164,
+            callerName: input.callerName ?? existing.callerName,
+          });
+          call = updated ?? existing;
+        }
+      }
+
+      if (!call) {
+        const result = await this.callService.findOrCreateCallByProviderCallId(
+          "freeswitch",
+          input.callUuid,
+          {
+            direction: "inbound",
+            provider: "freeswitch",
+            from,
+            to,
+            fromRaw: input.fromRaw ?? undefined,
+            toRaw: input.toRaw ?? undefined,
+            fromE164: input.fromE164,
+            toE164: input.toE164,
+            callerName: input.callerName,
+            status: "received",
+            correlationId,
+            providerCallId: input.callUuid,
+            recordingEnabled: true,
+            timestamps: { receivedAt: now },
+          },
+        );
+        call = result.call;
+        created = result.created;
+      }
+
+      const callId = call._id.toString();
+      metrics.incActiveCalls();
+      const ctx = { correlationId: call.correlationId, callId, uuid: input.callUuid };
+
+      if (created) {
+        await this.callService.pushEvent(call, "received", { from, to, callUuid: input.callUuid });
+      }
+
+      // ---- 2. Broadcast inbound_call.offered to agent browsers ----
+      this.agentWs?.broadcast({
+        type: "inbound_call.offered",
+        callId,
+        from,
+        to,
+        calledAt: now.toISOString(),
+      });
+      this.log(ctx, "info", "[agent-bridge] Broadcast inbound_call.offered");
+
+      // ---- 3. Answer the channel to hold the PSTN caller ----
+      await this.execAndWait(conn, "answer", "", EslCallHandlerService.ANSWER_TIMEOUT_MS);
+      this.log(ctx, "info", "[agent-bridge] Channel answered");
+      await this.callService.setStatus(callId, "answered", { answeredAt: new Date() });
+      await this.callService.pushEvent(call, "answered");
+
+      // ---- 4. Start recording before bridge ----
+      const recordingPath = path.join(this.recordingsBase, `${input.callUuid}.wav`);
+      await this.callService.setStatus(callId, "recording_started", { recordingStartedAt: new Date() });
+      await this.callService.pushEvent(call, "recording_started");
+
+      const providerRecordingId = input.callUuid;
+      const retrievalUrl = `/api/recordings/local/${providerRecordingId}`;
+      const existingRec = await this.callService.findRecordingDocumentByProviderRecordingId(providerRecordingId);
+      if (existingRec) {
+        await this.callService.updateRecordingDocument(existingRec._id.toString(), { status: "pending", filePath: recordingPath, retrievalUrl });
+      } else {
+        await this.callService.createRecordingDocument({ callId: call._id, provider: "freeswitch", providerRecordingId, status: "pending", filePath: recordingPath, retrievalUrl });
+      }
+      conn.execute("record_session", recordingPath, () => {});
+      this.log(ctx, "info", `[agent-bridge] Recording started: ${recordingPath}`);
+
+      // ---- 5. Enable DTMF capture during the bridge ----
+      conn.send("event plain DTMF");
+      conn.send("event plain CHANNEL_DTMF");
+      const detachDtmfLogger = this.attachDtmfLogger(conn, callId);
+
+      // ---- 6. Bridge caller to agent WebRTC endpoint ----
+      // This blocks until (a) the agent answers + hangs up, (b) the caller hangs up,
+      // or (c) the bridge times out (120s safety net).
+      const bridgeTarget = `user/${env.agentSipUsername}@${env.freeswitchDomain}`;
+      this.log(ctx, "info", `[agent-bridge] Bridging to ${bridgeTarget}`);
+
+      try {
+        await this.execAndWait(conn, "bridge", bridgeTarget, 120_000);
+        this.log(ctx, "info", "[agent-bridge] Bridge returned (call ended normally)");
+      } catch (bridgeErr) {
+        // Bridge can return an error if the agent didn't answer or the caller hung up — treat as normal end.
+        this.log(ctx, "info", "[agent-bridge] Bridge ended with error (likely hangup/no-answer)", bridgeErr);
+      }
+
+      // ---- 7. Stop recording and finalize ----
+      detachDtmfLogger();
+      try {
+        await this.execAndWait(conn, "stop_record_session", recordingPath, EslCallHandlerService.STOP_RECORD_TIMEOUT_MS);
+      } catch {
+        // Best-effort — channel may already be gone
+      }
+      try {
+        await this.handleRecordingComplete(callId, input.callUuid, recordingPath);
+      } catch (err) {
+        this.log(ctx, "error", "[agent-bridge] handleRecordingComplete failed", err);
+      }
+
+      // ---- 8. Finalize Mongo and broadcast call.ended ----
+      const hangupAt = new Date();
+      await this.callService.setStatus(callId, "hangup",    { hangupAt });
+      await this.callService.pushEvent(call, "hangup");
+      await this.callService.setStatus(callId, "completed", { completedAt: new Date() });
+      await this.callService.pushEvent(call, "completed");
+
+      this.agentWs?.broadcast({ type: "call.ended", callId, reason: "completed" });
+      this.log(ctx, "info", "[agent-bridge] Call completed");
+
+      metrics.decActiveCalls();
+      return { callId, recordingPath };
+    } catch (error) {
+      try {
+        const existing = await this.callService.findCallDocumentByProviderCallId(input.callUuid);
+        const callId = existing?._id?.toString();
+        if (callId) {
+          this.agentWs?.broadcast({ type: "call.ended", callId, reason: "failed" });
+        }
+        await this.failAndHangup({ conn, callId, stage: "executeAgentBridgeFlow", error });
+      } catch (err) {
+        this.log(null, "error", "[agent-bridge] failAndHangup wrapper failed", err);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Original hello IVR script (AGENT_MODE=hello, unchanged):
+   * answer → tone → record → DTMF 1 early stop → hangup.
+   * @returns Mongo call id string and filesystem path to the WAV for logging; throws on unrecoverable ESL errors after failAndHangup attempt.
+   */
+  private async executeHelloFlow(
     conn: Connection,
     input: {
       callUuid: string;

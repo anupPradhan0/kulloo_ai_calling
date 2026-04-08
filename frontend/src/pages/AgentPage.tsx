@@ -2,22 +2,30 @@ import { useState } from 'react'
 import { DEFAULT_API_BASE_URL } from '../api/constants'
 import { PhoneDialer } from '../components/PhoneDialer'
 import { CallHistoryPanel } from '../components/CallHistoryPanel'
+import { AgentWsProvider } from '../contexts/AgentWsContext'
+import { SipProvider, useSip } from '../contexts/SipContext'
+import { StatusToggle } from '../components/StatusToggle'
+import { IncomingCallModal } from '../components/IncomingCallModal'
+import { ActiveCallPanel } from '../components/ActiveCallPanel'
 import './AgentPage.css'
 
-export function AgentPage() {
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_API_BASE_URL)
+function AgentPageContent({ baseUrl, onBaseUrlChange }: { baseUrl: string; onBaseUrlChange: (url: string) => void }) {
   const [refreshToken, setRefreshToken] = useState(0)
-
   const bumpHistory = () => setRefreshToken((n) => n + 1)
+  const { activeSession } = useSip()
 
   return (
     <div className="agent-page">
-      <header className="agent-page-header">
-        <p className="agent-eyebrow">Agent</p>
-        <h1 className="agent-title">Outbound dialer</h1>
-        <p className="agent-lead">
-          Place calls and browse inbound and outbound history from the API.
-        </p>
+      <IncomingCallModal />
+      <header className="agent-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <p className="agent-eyebrow">Agent Workstation</p>
+          <h1 className="agent-title">Softphone & Console</h1>
+          <p className="agent-lead">
+            Take and place calls directly in the browser via WebRTC.
+          </p>
+        </div>
+        <StatusToggle baseUrl={baseUrl} />
       </header>
 
       <div className="agent-layout">
@@ -28,17 +36,35 @@ export function AgentPage() {
               className="agent-base-input"
               type="url"
               value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
+              onChange={(e) => onBaseUrlChange(e.target.value)}
               spellCheck={false}
               autoComplete="off"
             />
           </label>
-          <PhoneDialer baseUrl={baseUrl} onCallPlaced={bumpHistory} />
+          
+          {/* Show the active call panel if we are in a call, else show the dialer */}
+          {activeSession ? (
+            <ActiveCallPanel />
+          ) : (
+            <PhoneDialer baseUrl={baseUrl} onCallPlaced={bumpHistory} />
+          )}
         </div>
         <div className="agent-column agent-column--history">
           <CallHistoryPanel baseUrl={baseUrl} refreshToken={refreshToken} />
         </div>
       </div>
     </div>
+  )
+}
+
+export function AgentPage() {
+  const [baseUrl, setBaseUrl] = useState(DEFAULT_API_BASE_URL)
+
+  return (
+    <AgentWsProvider baseUrl={baseUrl}>
+      <SipProvider baseUrl={baseUrl}>
+        <AgentPageContent baseUrl={baseUrl} onBaseUrlChange={setBaseUrl} />
+      </SipProvider>
+    </AgentWsProvider>
   )
 }

@@ -32,6 +32,9 @@
       <load module="mod_tone_stream"/>
       <load module="mod_native_file"/>
       <load module="mod_hash"/>
+      <!-- WebRTC codecs (required for sip.js / browser audio) -->
+      <load module="mod_opus"/>
+      <load module="mod_vp8"/>
     </modules>
   </configuration>
 
@@ -103,6 +106,53 @@
           <param name="auth-calls" value="false"/>
         </settings>
       </profile>
+
+      <!--
+        WebRTC profile — sip.js agent browser registers here over WSS.
+
+        Key settings:
+        - wss-binding: 7443 (HTTPS/WSS port for browser SIP over WebSocket)
+        - ws-binding:  5066 (plain WS, useful for local testing behind a proxy)
+        - tls-cert-dir: mount certbot certs here (see freeswitch/README-tls.md)
+        - auth-calls: true — agents authenticate with username/password
+        - context: mrf — same dialplan context so bridged PSTN calls go through ESL
+        - SRTP / DTLS are negotiated automatically by mod_sofia for WebRTC peers
+      -->
+      <profile name="webrtc">
+        <settings>
+          <param name="sip-ip"   value="0.0.0.0"/>
+          <param name="rtp-ip"  value="0.0.0.0"/>
+          <param name="ext-sip-ip" value="$${external_sip_ip}"/>
+          <param name="ext-rtp-ip" value="$${external_sip_ip}"/>
+
+          <!-- WSS port: browser sip.js connects here (must be in Docker port mapping) -->
+          <param name="wss-binding" value=":7443"/>
+          <!-- Plain WS fallback (optional, for debugging behind nginx) -->
+          <param name="ws-binding"  value=":5066"/>
+
+          <!-- TLS certs: mount certbot pem files here (see README-tls.md) -->
+          <param name="tls-cert-dir" value="/etc/freeswitch/tls"/>
+          <param name="tls-verify-policy" value="none"/>
+
+          <!-- Context and dialplan — same as internal so PSTN calls are routed correctly -->
+          <param name="context"  value="mrf"/>
+          <param name="dialplan" value="XML"/>
+
+          <!-- Agents must authenticate with SIP username + password -->
+          <param name="auth-calls" value="true"/>
+
+          <!-- Codec prefs: OPUS first for WebRTC, then PCMU/PCMA as PSTN fallback -->
+          <param name="inbound-codec-prefs"  value="OPUS,PCMU,PCMA"/>
+          <param name="outbound-codec-prefs" value="OPUS,PCMU,PCMA"/>
+
+          <!-- NAT handling for agents behind home routers -->
+          <param name="apply-nat-acl" value="nat.auto"/>
+          <param name="aggressive-nat-detection" value="true"/>
+
+          <param name="manage-presence" value="false"/>
+          <param name="disable-transcoding" value="false"/>
+        </settings>
+      </profile>
     </profiles>
   </configuration>
 
@@ -118,4 +168,13 @@
       <X-PRE-PROCESS cmd="include" data="dialplan/hello.xml"/>
     </include>
   </dialplan>
+
+  <!--
+    User directory: agent SIP credentials for WebRTC softphone registration.
+    Each file under directory/ defines one SIP user.
+    The password MUST match AGENT_SIP_PASSWORD in backend/.env.
+  -->
+  <directory>
+    <X-PRE-PROCESS cmd="include" data="directory/default/*.xml"/>
+  </directory>
 </include>

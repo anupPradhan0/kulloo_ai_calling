@@ -1,0 +1,53 @@
+.status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.status-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status-toggle__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+/* Available */
+.status-toggle--available {
+  background: color-mix(in srgb, #16a34a 12%, var(--card-bg));
+  border-color: #16a34a;
+  color: #16a34a;
+}
+.status-toggle--available .status-toggle__dot {
+  background: #16a34a;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #16a34a 25%, transparent);
+  animation: pulse-green 2s infinite;
+}
+
+/* Offline */
+.status-toggle--offline {
+  background: var(--card-bg);
+  border-color: var(--border);
+  color: var(--muted);
+}
+.status-toggle--offline .status-toggle__dot {
+  background: var(--muted);
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, #16a34a 40%, transparent); }
+  50%       { box-shadow: 0 0 0 5px color-mix(in srgb, #16a34a 0%, transparent); }
+}

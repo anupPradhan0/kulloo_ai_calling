@@ -1,0 +1,32 @@
+<include>
+  <!--
+    Agent SIP user directory for WebRTC softphone.
+
+    IMPORTANT: The password here MUST match AGENT_SIP_PASSWORD in backend/.env.
+    After changing the password in .env, update it here and restart FreeSWITCH.
+
+    The user id ("agent1") must also match AGENT_SIP_USERNAME in backend/.env.
+    This is the identity that sip.js registers with and that ESL bridges to via:
+      bridge(user/agent1@<FREESWITCH_DOMAIN>)
+  -->
+  <user id="agent1">
+    <params>
+      <!--
+        SIP password — change to match AGENT_SIP_PASSWORD in backend/.env.
+        Default: agent123
+      -->
+      <param name="password" value="agent123"/>
+      <param name="vm-password" value="0000"/>
+    </params>
+    <variables>
+      <!-- Allow all outbound call types -->
+      <variable name="toll_allow"     value="domestic,international,local"/>
+      <variable name="callgroup"      value="default"/>
+      <!-- Effective caller ID shown to PSTN for outbound calls placed by agent -->
+      <variable name="effective_caller_id_name"   value="Kulloo Agent"/>
+      <variable name="effective_caller_id_number" value="1000"/>
+      <!-- Enable SRTP/DTLS for WebRTC media security -->
+      <variable name="rtp_secure_media"           value="true"/>
+    </variables>
+  </user>
+</include>
