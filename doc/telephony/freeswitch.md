@@ -24,8 +24,11 @@ Recording WAV files are typically written to a directory shared with the backend
 freeswitch/
   conf/
     dialplan/hello.xml   # Hello extension: socket → Kulloo ESL
+    directory/default/agent1.xml  # WebRTC agent SIP user (sip.js registration)
     freeswitch.xml       # Modules, Sofia, event_socket, dialplan include
-    vars.xml             # external_sip_ip, codecs, RTP range, optional webhook var
+    vars.xml             # Base vars (includes kulloo_esl_host/port, codecs, RTP range, webhook)
+    vars.fs1.xml          # fs1 overrides (external IP + RTP range)
+    vars.fs2.xml          # fs2 overrides (external IP + RTP range)
 ```
 
 Docker may mount these in different ways (see §7).
@@ -42,10 +45,10 @@ Defines a single dialplan **context** named **`mrf`** and one extension **`hello
 - **Action:** `socket` — FreeSWITCH opens an **outbound** TCP connection to the Kulloo ESL server and transfers session control (async, full event socket mode).
 
 ```xml
-<action application="socket" data="<kulloo-host>:<esl_port> async full"/>
+<action application="socket" data="$${kulloo_esl_host}:$${kulloo_esl_port} async full"/>
 ```
 
-The repository currently points at a concrete host (replace with your backend IP/hostname and port in production). **`async full`** means the socket session runs asynchronously with full ESL semantics for that call leg.
+The socket target is **not hardcoded** in dialplan; it comes from `vars.xml` / `vars.fsN.xml` (`kulloo_esl_host` + `kulloo_esl_port`). **`async full`** means the socket session runs asynchronously with full ESL semantics for that call leg.
 
 **Important:** Media logic (playback, `record_session`, hangup) is **not** implemented in this XML for the hello path; it runs in **Node** after the socket connects.
 
@@ -54,19 +57,19 @@ The repository currently points at a concrete host (replace with your backend IP
 A bundle of related settings:
 
 1. **Modules** — Loads SIP (`mod_sofia`), XML dialplan (`mod_dialplan_xml`), **`mod_event_socket`** (classic ESL server), tone/recording helpers (`mod_tone_stream`, `mod_sndfile`), etc.
-
 2. **Inbound ESL server (`event_socket.conf` embedded)** — FreeSWITCH listens on **`0.0.0.0:8021`** with password **`ClueCon`**. This is the **classic** pattern: a **client** connects **to** FreeSWITCH on port **8021**. It is **separate** from the dialplan **`socket`** app, which makes FreeSWITCH connect **out** to Kulloo on port **3200**.
-
+3. **Core limits and RTP range (`switch.conf` embedded)** — `max-sessions=600`, `sessions-per-second=60`, and RTP ports are wired to `$${rtp_start_port}` / `$${rtp_end_port}` from `vars*.xml`.
 3. **Sofia SIP Profiles**
-   * **`internal` profile**: Binds SIP (port **5070**), sets RTP-related external IP from `vars.fsN.xml`, and **`auth-calls=false`** so unauthenticated inbound INVITEs (e.g. from Kamailio) can be accepted. The profile references the **`mrf`** dialplan context.
-   * **`webrtc` profile**: Binds WSS (Secure WebSocket) on port **7443** heavily restricting codecs to `OPUS` and `VP8`. Enables **`wss-binding`** specifically so `sip.js` can connect a live browser agent to FreeSWITCH.
-
-4. **Dialplan** — Includes `dialplan/hello.xml` so the `hello-call` extension is loaded.
+   * **`internal` profile**: Binds SIP (port **5070**), **context `mrf`**, and **`auth-calls=false`** so unauthenticated INVITEs (e.g. from Kamailio) can be accepted. Advertised IP comes from `$${external_sip_ip}` in `vars*.xml`.
+   * **`webrtc` profile**: Enables browser registration via **WSS `:7443`** (`wss-binding`) and also has an optional plain **WS `:5066`** (`ws-binding`). Certs are expected under `/etc/freeswitch/tls` (see `freeswitch/README-tls.md`). Uses **context `mrf`** and `auth-calls=true`.
+4. **Dialplan** — Includes `dialplan/hello.xml` so the `hello-call` extension is loaded (context `mrf`).
+5. **Directory** — Includes `directory/default/*.xml` (e.g. `agent1.xml`) for WebRTC agent credentials.
 
 ### 3.3 `conf/vars.xml`
 
 - **`external_sip_ip`** — Public IPv4 used in Sofia for correct **Contact** and **RTP** when FreeSWITCH runs behind NAT/Docker.
 - **`domain`** — Derived from `external_sip_ip`.
+- **`kulloo_esl_host` / `kulloo_esl_port`** — Where FreeSWITCH connects for the hello flow outbound socket (in this repo, `kulloo_esl_host=api`, `kulloo_esl_port=3200`).
 - **`kulloo_recording_webhook_url`** — Optional global variable for a Kulloo HTTP callback endpoint. The hello flow **records and finalizes metadata in Node** (`esl-call-handler.service.ts`); this variable is available if you add dialplan or other FS-side integrations that POST completion to the API.
 - **Codecs** — `OPUS,PCMU,PCMA` preferences.
 - **RTP range** — `16384`–`17383` (fs1 defaults, 500 concurrent streams). Overridden per instance via `vars.fs1.xml`, `vars.fs2.xml`, etc.

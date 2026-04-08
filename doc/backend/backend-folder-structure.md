@@ -77,6 +77,7 @@ Use this when you add a file so it lands next to similar code. **Rule of thumb:*
 backend/
 ├── node_modules/                    # third-party deps (see §1 top-level)
 ├── scripts/
+│   ├── load-test-kamailio.ts
 │   └── repeat-hello-calls.ts
 ├── Dockerfile
 ├── .dockerignore
@@ -96,6 +97,9 @@ backend/
     │   ├── correlation.middleware.ts
     │   └── error.middleware.ts
     ├── modules/
+    │   ├── agent/
+    │   │   └── routes/
+    │   │       └── agent.routes.ts
     │   ├── calls/
     │   │   ├── adapters/
     │   │   │   └── telephony.adapter.ts
@@ -126,6 +130,8 @@ backend/
     │   ├── index.ts
     │   └── metrics.routes.ts
     ├── services/
+    │   ├── agent/
+    │   │   └── agent-ws.service.ts
     │   ├── call-control/                    # [NEW] Flow A/B strategy pattern
     │   │   ├── call-control-backend.interface.ts
     │   │   ├── call-control-backend.factory.ts
@@ -169,7 +175,7 @@ backend/
 
 ## 4. Complete file inventory (every project file, excluding `node_modules/**`)
 
-Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' | sort`. **48** files total: **1** script, **38** `.ts` files under `src/`, **`src/README.md`**, **8** root project files.
+Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' | sort`. **57** files total: **2** scripts, **46** `.ts` files under `src/`, **`src/README.md`**, **8** root project files.
 
 | Path |
 |------|
@@ -180,12 +186,14 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | `package.json` |
 | `pnpm-lock.yaml` |
 | `README.md` |
+| `scripts/load-test-kamailio.ts` |
 | `scripts/repeat-hello-calls.ts` |
 | `src/app.ts` |
 | `src/config/database.ts` |
 | `src/config/env.ts` |
 | `src/middlewares/correlation.middleware.ts` |
 | `src/middlewares/error.middleware.ts` |
+| `src/modules/agent/routes/agent.routes.ts` |
 | `src/modules/calls/adapters/telephony.adapter.ts` |
 | `src/modules/calls/controllers/call.controller.ts` |
 | `src/modules/calls/controllers/plivo-answer.controller.ts` |
@@ -205,6 +213,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | `src/routes/index.ts` |
 | `src/routes/metrics.routes.ts` |
 | `src/server.ts` |
+| `src/services/agent/agent-ws.service.ts` |
 | `src/services/call-control/call-control-backend.interface.ts` |
 | `src/services/call-control/call-control-backend.factory.ts` |
 | `src/services/call-control/kulloo-backend.ts` |

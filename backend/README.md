@@ -4,7 +4,7 @@ TypeScript + Express + MongoDB backend with first end-to-end `hello-call` contra
 
 **Architecture and telephony (for people and AI assistants):** see [`doc/README.md`](../doc/README.md) in the repo root.
 
-**Production deploy on a server (Docker Compose):** see [`doc/deployment.md`](../doc/deployment.md) (overview) and [`Docker/README.md`](../Docker/README.md) (full detail).
+**Production deploy on a server (Docker Compose):** see [`doc/ops/deployment.md`](../doc/ops/deployment.md) (overview) and [`Docker/README.md`](../Docker/README.md) (full detail).
 
 **Quick map of this package’s `src/` tree:** [`src/README.md`](src/README.md).
 
@@ -41,14 +41,33 @@ Base URL: `http://localhost:5000/api`
 
 - `POST /calls/outbound/hello`  
   Outbound flow with `Idempotency-Key` header
+- `GET /calls`  
+  List recent calls
 - `GET /calls/:callId/recordings`  
   List recordings for a call
+- `GET /recordings`  
+  List recording metadata (newest first)
 - `GET /recordings/:recordingId`  
   Fetch one recording metadata
+- `GET /recordings/:recordingId/file`  
+  Stream a recording file (when `filePath` exists)
+- `GET /recordings/local`  
+  List local `.wav` files under `RECORDINGS_DIR`
+- `GET /recordings/local/:uuid`  
+  Stream one local `.wav` (uuid without `.wav`)
 - `POST /calls/callbacks/twilio/recording`  
   Optional callback to finalize Twilio recording metadata
 - `POST /calls/callbacks/plivo/recording`  
-  Plivo recording callback (used by `/plivo/answer` XML `callbackUrl`)
+  Plivo recording callback (deduped with Redis)
+- `POST /calls/callbacks/freeswitch/recording`  
+  Optional FreeSWITCH recording callback (deduped with Redis)
+
+### Agent Softphone (WebRTC)
+
+- `GET /agent/credentials`
+  Returns FreeSWITCH WSS URL + SIP credentials for `sip.js`
+- `POST /agent/status`
+  Body: `{ "status": "available" | "offline" }`
 
 ## Plivo local testing (ngrok)
 - Start ngrok: `ngrok http 5000`

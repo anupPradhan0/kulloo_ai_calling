@@ -58,6 +58,8 @@ graph TD
 > [!WARNING]
 > **Not loaded:** `rtpproxy`, `mediaproxy`, `rtpengine` — Kamailio does not touch RTP in this deployment.
 
+This repo’s `kamailio/kamailio.cfg` loads a minimal proxy + dispatcher set:
+
 | Module | Purpose |
 |--------|---------|
 | `tm` | Transaction manager — reliable INVITE forwarding, timeout handling |
@@ -205,6 +207,8 @@ sequenceDiagram
 - After **3 consecutive failures** (`ds_probing_threshold=3`), FS is marked **inactive**
 - Active FS instances are auto-detected for new INVITEs
 - Recovery: once FS responds to OPTIONS successfully, it re-enters the rotation
+- Reply codes treated as “healthy” in this repo: **2xx**, plus **404** and **480** (`ds_ping_reply_codes="class=2;code=404;code=480"`).
+- Failover behavior: initial `INVITE` uses `ds_select_dst(1, 4)` (set 1, round-robin) and if the selected FS fails, `failure_route[DISPATCHER_FAILURE]` calls `ds_next_dst()` to retry on the next available destination.
 
 ```bash
 # Check live dispatcher state
@@ -213,6 +217,24 @@ docker exec kulloo-kamailio kamctl dispatcher show
 # Force reload after editing dispatcher.list (no restart)
 docker exec kulloo-kamailio kamctl dispatcher reload
 ```
+
+---
+
+## 10. What to edit (source of truth)
+
+| You need to change… | Edit |
+|---|---|
+| Which FreeSWITCH instances are in the pool | `kamailio/dispatcher.list` (set id **1**) |
+| Health check interval / threshold / reply codes | `kamailio/kamailio.cfg` (`modparam("dispatcher", ...)`) |
+| Signaling routing logic (INVITE handling, in-dialog loose routing, failover) | `kamailio/kamailio.cfg` (`request_route`, `route[RELAY]`, `failure_route[DISPATCHER_FAILURE]`) |
+| Public advertise IP in SIP Contact/Via | set `KAMAILIO_ADVERTISE_ADDRESS` (used by `advertised_address=KAMAILIO_ADVERTISE_ADDRESS`) |
+| Transaction timers (how long to wait for FS) | `kamailio/kamailio.cfg` (`tm.fr_timer`, `tm.fr_inv_timer`) |
+
+Notes from this repo’s config:
+
+- Kamailio listens on **UDP+TCP `0.0.0.0:5060`**.
+- Out-of-dialog `OPTIONS` are answered **200 OK** (used for probes).
+- In-dialog requests are handled via `record_route()` + `loose_route()` and then relayed (`t_relay()`).
 
 ---
 
