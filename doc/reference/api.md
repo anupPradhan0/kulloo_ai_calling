@@ -23,9 +23,19 @@ Full outbound (Plivo → Kamailio → FreeSWITCH pool → ESL) architecture and 
 
 - `POST /api/calls/outbound/hello`
   - Runs the outbound “hello” flow
-  - Required header: `Idempotency-Key: <unique>`
+  - Returns `Idempotency-Key: <unique>` for idempotency.
 - `GET /api/calls/:callId/recordings`
   - List recording metadata for a call
+
+### Agent Softphone (`AGENT_MODE=webrtc`)
+
+- `GET /api/agent/credentials`
+  - Returns connection details for the frontend SIP client: `username`, `password`, `domain`, `wssUrl`, and `stunServer`.
+- `POST /api/agent/status`
+  - Body: `{ status: 'Available' | 'Offline' }`
+  - Updates the backend with the current availability of the agent.
+- `WS /ws/agent`
+  - Out-of-band WebSocket for real-time call states. Broadcasts events such as `inbound_call.offered`, `call.answered`, and `call.ended` directly to the browser.
 
 ### Provider callbacks (webhooks)
 

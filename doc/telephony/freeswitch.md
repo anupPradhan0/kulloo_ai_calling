@@ -57,7 +57,9 @@ A bundle of related settings:
 
 2. **Inbound ESL server (`event_socket.conf` embedded)** — FreeSWITCH listens on **`0.0.0.0:8021`** with password **`ClueCon`**. This is the **classic** pattern: a **client** connects **to** FreeSWITCH on port **8021**. It is **separate** from the dialplan **`socket`** app, which makes FreeSWITCH connect **out** to Kulloo on port **3200**.
 
-3. **Sofia SIP (`internal` profile)** — Binds SIP (port **5070**), sets RTP-related external IP from `vars.fsN.xml`, and **`auth-calls=false`** so unauthenticated inbound INVITEs (e.g. from Kamailio) can be accepted. The profile references the **`mrf`** dialplan context.
+3. **Sofia SIP Profiles**
+   * **`internal` profile**: Binds SIP (port **5070**), sets RTP-related external IP from `vars.fsN.xml`, and **`auth-calls=false`** so unauthenticated inbound INVITEs (e.g. from Kamailio) can be accepted. The profile references the **`mrf`** dialplan context.
+   * **`webrtc` profile**: Binds WSS (Secure WebSocket) on port **7443** heavily restricting codecs to `OPUS` and `VP8`. Enables **`wss-binding`** specifically so `sip.js` can connect a live browser agent to FreeSWITCH.
 
 4. **Dialplan** — Includes `dialplan/hello.xml` so the `hello-call` extension is loaded.
 
@@ -77,8 +79,9 @@ A bundle of related settings:
 |-----------|-----------|------------------|-------------------|
 | **`mod_event_socket` server** | Client → FreeSWITCH | **8021** on FS | Optional: tools or services that connect **to** FreeSWITCH with password `ClueCon`. |
 | **Dialplan `socket` application** | FreeSWITCH → Kulloo | **3200** on Kulloo (`ESL_OUTBOUND_PORT`) | **Hello path:** FS connects **out** to Node; Node runs `EslCallHandlerService`. |
+| **WebRTC Softphone (`wss-binding`)** | Client browser → FreeSWITCH | **7443** on FS (`FREESWITCH_WSS_URL`) | **Agent Path:** `sip.js` registers natively via Secure WebSockets. |
 
-The production hello flow documented in this repo is centered on the second row: **`socket` → Kulloo:3200**.
+The production hello flow documented in this repo is centered on the second row: **`socket` → Kulloo:3200**. The browser softphone adds the third row.
 
 ---
 

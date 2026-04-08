@@ -32,7 +32,11 @@ There is **no** dedicated HTTP route like “`POST /api/calls/inbound`”. The *
 | `KullooCallId` on SIP | Usually **absent** (pure DID inbound) | Set on `calls.create` + Answer URL for attach |
 | `providerCallId` | FreeSWITCH **channel UUID** | FS UUID after attach; `pending-<callSid>` before |
 
-The **hello media script** (answer → tone → record → DTMF 1 early stop → stop record → hangup) is **shared**; only **how** the `Call` row is created and correlated differs.
+The actual media execution depends on **`AGENT_MODE`**:
+* **`AGENT_MODE=hello` (default):** Runs the automated hello script (answer → tone → record → DTMF 1 early stop → stop record → hangup).
+* **`AGENT_MODE=webrtc`:** Runs the agent bridge (broadcasts WS event to frontend → answers → starts recording → bridges caller to agent WebRTC browser).
+
+In both modes, **how** the `Call` row is initially created and correlated remains identical.
 
 ---
 
@@ -58,7 +62,16 @@ sequenceDiagram
   else Valid KullooCallId (bridged outbound leg)
     ESL->>Mongo: findByStableCallId, patch providerCallId, keep outbound row
   end
-  ESL->>FS: answer, sleep, playback, record_session, DTMF, stop_record, hangup
+
+  alt AGENT_MODE = webrtc
+    ESL->>Browser: Broadcast inbound_call.offered via WS
+    ESL->>FS: answer, record_session, bridge user/agent1
+    Browser-->>FS: sip.js accepts call, media flows
+    Note over FS,Browser: Caller and Agent converse
+  else AGENT_MODE = hello (default)
+    ESL->>FS: answer, sleep, playback, record_session, DTMF, stop_record, hangup
+  end
+
   ESL->>Mongo: Call status + CallEvents + Recording (pending → completed/failed)
 ```
 
@@ -109,7 +122,9 @@ File: `backend/src/services/freeswitch/esl-call-handler.service.ts`.
 3. **Subscriptions:** `conn.send("myevents")`; later `event plain DTMF` / `CHANNEL_DTMF` for digits.
 4. **Identity fallbacks:** If From/To are missing, **`getvar`** on the channel (`effective_caller_id_number`, `destination_number`, etc.) and optional **`uuid`** correction.
 5. **`KullooCallId`:** Parsed from headers or vars (e.g. `sip_h_X-PH-KullooCallId`). If it is a valid 24-hex id and a `Call` exists, ESL **attaches** to that document (outbound-bridge case). Otherwise **`findOrCreateByProviderCallId("freeswitch", channelUuid)`** with **`direction: "inbound"`**.
-6. **Media:** `answer` → short `sleep` → `playback` (tone) → `recording_started` + **`Recording` row `pending`** → `record_session` → wait up to 20s or **DTMF `1`** → `stop_record_session` → **`handleRecordingComplete`** (file stat / integrity) → optional confirm tone → `hangup` → `completed` + events.
+6. **Media execution:** Splits based on environment config:
+   * **`hello` mode**: `answer` → short `sleep` → `playback` (tone) → `recording_started` + **`Recording` row `pending`** → `record_session` → wait up to 20s or **DTMF `1`** → `stop_record_session` → **`handleRecordingComplete`** → `hangup` → `completed` + events.
+   * **`webrtc` mode**: `inbound_call.offered` WebSocket broadcast sent to frontend → `answer` → `record_session` → FreeSWITCH `bridge` action to `user/agent1@...` → call remains bridged until caller or agent hangs up → `stop_record_session` → `handleRecordingComplete` → `call.ended` broadcast.
 
 **Failure path:** Timeouts on ESL steps → `failAndHangup` → `Call` **`failed`**, `failedCalls` metric, best-effort hangup.
 

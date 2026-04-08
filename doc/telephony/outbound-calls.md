@@ -16,7 +16,7 @@ This document describes how **outbound PSTN** (and related) calls work in Kulloo
 |--------|------|
 | **Kulloo API** | Creates the `Call` document **before** dialing; enforces idempotency; triggers Plivo (or Twilio / local simulation). |
 | **Plivo** | PSTN origination and carrier connectivity. When the callee answers, Plivo requests your **Answer URL**; you return XML that **bridges** the call into FreeSWITCH. |
-| **FreeSWITCH** | Media plane: answer, tone, `record_session`, DTMF, hangup. |
+| **FreeSWITCH** | Media plane: answer, tone, `record_session`, DTMF, hangup. (Or bridges to an Agent if `AGENT_MODE=webrtc`). |
 | **ESL (Event Socket, outbound mode)** | Node listens on `ESL_OUTBOUND_PORT`; FreeSWITCH `socket` app connects **in** to Kulloo and runs the scripted flow in `esl-call-handler.service.ts`. |
 | **MongoDB** | `Call`, `CallEvent`, `Recording` — keyed by a stable business id plus provider-specific ids. |
 | **Redis (required)** | **`REDIS_URL`** must be set and reachable at startup: **idempotency cache** for repeat `Idempotency-Key` on outbound hello (Mongo stays authoritative); **dedupe** for recording webhooks. See [redis.md](../reference/redis.md). |
@@ -62,6 +62,7 @@ sequenceDiagram
   participant KAM as Kamailio_:5060
   participant FS as FreeSWITCH_fs1_or_fs2
   participant ESL as ESL_Handler_:3200
+  participant Browser as Agent_Softphone
 
   Client->>API: POST /api/calls/outbound/hello + Idempotency-Key
   API->>Mongo: Create Call (_id, pending providerCallId, initiated)
@@ -82,7 +83,16 @@ sequenceDiagram
   
   FS->>ESL: Outbound socket connect (per dialplan)
   ESL->>Mongo: findByStableCallId(KullooCallId), patch providerCallId=FS_UUID
-  ESL->>FS: answer, tone, record_session, DTMF listen, stop, hangup
+
+  alt AGENT_MODE = webrtc
+    ESL->>Browser: Broadcast inbound_call.offered via WS
+    ESL->>FS: answer, record_session, bridge user/agent1
+    Browser-->>FS: sip.js accepts call, media flows
+    Note over FS,Browser: Caller and Agent converse
+  else AGENT_MODE = hello (default)
+    ESL->>FS: answer, tone, record_session, DTMF listen, stop, hangup
+  end
+
   ESL->>Mongo: status/events/recording metadata
 ```
 
@@ -153,7 +163,9 @@ Structured logs: `plivo_answer_bridge_to_freeswitch`, `plivo_answer_missing_kull
 1. Parse channel UUID, from/to, and **`kullooCallId`** from channel data or variables such as `sip_h_X-PH-KullooCallId` / `variable_sip_h_X-PH-KullooCallId`.
 2. If `kullooCallId` is a valid 24-hex id: **`findByStableCallId`**, then **`updateById`** with real **`providerCallId`** = FS channel UUID, preserve API `from` / `to` (FS may show internal extension e.g. `1000` as destination).
 3. If no stable id: **`findOrCreateByProviderCallId("freeswitch", uuid)`** — treats as **inbound** (not the outbound Plivo scenario).
-4. Flow: **answer** → short **sleep** → **playback** (tone/beep) → **`record_session`** to `RECORDINGS_DIR/<fs-uuid>.wav` → listen for **DTMF “1”** to stop early or **20s** timeout → **stop_record_session** → optional confirm tone → **hangup** → update **`Call`** / **`CallEvent`** / **`Recording`**.
+4. Flow execution depends on **`AGENT_MODE`**:
+   * **`hello` mode**: **answer** → short **sleep** → **playback** (tone/beep) → **`record_session`** to `RECORDINGS_DIR/<fs-uuid>.wav` → listen for **DTMF “1”** to stop early or **20s** timeout → **stop_record_session** → optional confirm tone → **hangup** → update **`Call`** / **`CallEvent`** / **`Recording`**.
+   * **`webrtc` mode**: **WS broadcast** `inbound_call.offered` → **answer** → **`record_session`** → execute **`bridge`** to agent extension → wait until agent/caller hangup → **stop_record_session** → update DBs.
 
 ESL logs include **`callId`** and **`callSid`** (same Mongo id) when the call document is known.
 

@@ -104,6 +104,7 @@ In the markdown files below this README, **relative links** are from each file�
 | [telephony/outbound-calls.md](telephony/outbound-calls.md) | Outbound: API → Plivo → Kamailio → FreeSWITCH pool → ESL, `KullooCallId`. |
 | [telephony/esl.md](telephony/esl.md) | Event Socket: FreeSWITCH connects to Kulloo (outbound ESL pattern, multi-instance). |
 | [telephony/freeswitch.md](telephony/freeswitch.md) | FreeSWITCH config layout, multi-instance (fs1/fs2), SIP port 5070, Docker notes. |
+| [telephony/webrtc-agent-softphone.md](telephony/webrtc-agent-softphone.md) | **WebRTC Softphone**: Agent connectivity (sip.js WSS listener, `/ws/agent`, and API bridging). |
 
 ## Reference
 
