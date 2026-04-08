@@ -9,6 +9,7 @@ import {
   getRecordingFile,
   listCallRecordings,
   listLocalRecordings,
+  listRecentCalls,
   localRecordingFile,
   outboundHelloCall,
   plivoRecordingCallback,
@@ -19,6 +20,7 @@ import {
 export const callRouter = Router();
 
 callRouter.post("/outbound/hello", outboundHelloCall);
+callRouter.get("/", listRecentCalls);
 callRouter.get("/:callId/recordings", listCallRecordings);
 callRouter.post("/callbacks/twilio/recording", twilioRecordingCallback);
 callRouter.post("/callbacks/plivo/recording", plivoRecordingCallback);

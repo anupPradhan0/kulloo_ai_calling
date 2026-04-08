@@ -123,6 +123,13 @@ export class CallRepository {
   }
 
   /**
+   * Recent calls for operator dashboards (newest activity first).
+   */
+  async listRecent(limit: number): Promise<Array<InstanceType<typeof CallModel>>> {
+    return CallModel.find().sort({ updatedAt: -1 }).limit(limit);
+  }
+
+  /**
    * Moves stale hangup-status calls to completed, optionally excluding channels still active in ESL.
    */
   async sweepStaleHangupToCompleted(

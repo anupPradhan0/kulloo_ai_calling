@@ -21,6 +21,15 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     description: 'Readiness: MongoDB and Redis are reachable.',
   },
   {
+    id: 'calls-list',
+    group: 'Calls',
+    method: 'GET',
+    path: '/api/calls',
+    queryString: '?limit=200',
+    description:
+      'List recent calls from MongoDB (inbound and outbound), newest activity first. Optional limit 1–500.',
+  },
+  {
     id: 'calls-outbound-hello',
     group: 'Calls',
     method: 'POST',

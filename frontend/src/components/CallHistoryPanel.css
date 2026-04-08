@@ -1,0 +1,279 @@
+.jam-history {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  box-sizing: border-box;
+}
+
+.jam-history-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+.jam-history-intro {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.jam-history-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jam-history-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.jam-btn-refresh {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.jam-btn-refresh:hover:not(:disabled) {
+  background: var(--btn-hover);
+}
+
+.jam-btn-refresh:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.jam-history-alert {
+  font-size: 0.82rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--result-bg);
+  color: var(--text-secondary);
+}
+
+.jam-history-alert--err {
+  color: var(--text-secondary);
+}
+
+.jam-history-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 8rem;
+  max-height: min(58vh, 36rem);
+  overflow-y: auto;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+}
+
+.jam-history-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.jam-call-card {
+  border-bottom: 1px solid var(--border);
+}
+
+.jam-call-card:last-child {
+  border-bottom: none;
+}
+
+.jam-call-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.6rem 1.75rem 0.65rem 0.65rem;
+  display: block;
+  position: relative;
+}
+
+.jam-call-summary::-webkit-details-marker {
+  display: none;
+}
+
+.jam-call-summary::after {
+  content: '';
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-55%) rotate(45deg);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.jam-call-card[open] > .jam-call-summary::after {
+  transform: translateY(-15%) rotate(-135deg);
+}
+
+.jam-call-card[open] > .jam-call-summary {
+  background: var(--code-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.jam-call-summary:hover {
+  background: var(--result-bg);
+}
+
+.jam-call-summary__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.jam-call-time {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.jam-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--text-secondary);
+}
+
+.jam-dir__ico {
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.jam-dir--in,
+.jam-dir--out {
+  background: var(--code-bg);
+  color: var(--text-secondary);
+}
+
+.jam-status {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.jam-status--completed,
+.jam-status--failed,
+.jam-status--connected,
+.jam-status--answered,
+.jam-status--recording_started,
+.jam-status--played,
+.jam-status--initiated,
+.jam-status--received {
+  background: var(--code-bg);
+  color: var(--muted);
+}
+
+.jam-call-summary__nums {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.jam-num-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.jam-num-label {
+  flex: 0 0 2rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.jam-num-value {
+  color: var(--text);
+  word-break: break-all;
+}
+
+.jam-call-body {
+  padding: 0.5rem 0.65rem 0.65rem;
+  background: var(--card-bg);
+}
+
+.jam-call-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.jam-call-dl__row {
+  display: grid;
+  grid-template-columns: minmax(5rem, 7.5rem) 1fr;
+  gap: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  align-items: start;
+}
+
+.jam-call-dl__row dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.jam-call-dl__row dd {
+  margin: 0;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.jam-call-dl__sub {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.jam-call-dl__row--err dd {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 520px) {
+  .jam-call-dl__row {
+    grid-template-columns: 1fr;
+  }
+
+  .jam-status {
+    margin-left: 0;
+  }
+}

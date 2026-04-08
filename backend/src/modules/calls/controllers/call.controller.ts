@@ -10,6 +10,7 @@ import { ApiError } from "../../../utils/api-error";
 import { parseWithSchema } from "../../../utils/zod-validate";
 import {
   callIdParamSchema,
+  callListQuerySchema,
   outboundHelloSchema,
   plivoRecordingCallbackQuerySchema,
   plivoRecordingCallbackSchema,
@@ -22,6 +23,21 @@ import { CallService } from "../services/call.service";
 const callService = new CallService();
 
 const DEFAULT_RECORDINGS_LIST_LIMIT = 200;
+const DEFAULT_CALLS_LIST_LIMIT = 200;
+
+/**
+ * GET /api/calls — lists recent calls from Mongo (inbound and outbound), newest first.
+ */
+export async function listRecentCalls(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const parsed = parseWithSchema(callListQuerySchema, req.query);
+    const limit = parsed.limit ?? DEFAULT_CALLS_LIST_LIMIT;
+    const calls = await callService.listRecentCalls(limit);
+    res.status(200).json({ success: true, count: calls.length, data: calls });
+  } catch (error) {
+    next(error);
+  }
+}
 
 /**
  * GET /api/recordings — lists recent recording metadata from Mongo (optional query: limit, default 200, max 500).

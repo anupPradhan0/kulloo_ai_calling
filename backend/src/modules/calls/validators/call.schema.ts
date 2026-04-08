@@ -15,6 +15,11 @@ export const outboundHelloSchema = z.object({
   recordingEnabled: z.boolean().default(true),
 });
 
+/** Query for GET /api/calls — list recent calls. */
+export const callListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+
 /** Route param for call-scoped recording list. */
 export const callIdParamSchema = z.object({
   callId: z.string().trim().regex(/^[0-9a-fA-F]{24}$/, "Invalid call id"),

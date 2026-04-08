@@ -1,0 +1,330 @@
+/* Self-contained dark phone: readable in any site theme */
+
+.phone-dialer {
+  --pd-bg: #0a0a0c;
+  --pd-surface: #121214;
+  --pd-raised: #1c1c21;
+  --pd-key: #25252c;
+  --pd-key-border: #32323a;
+  --pd-text: #f5f5f7;
+  --pd-text-dim: #8e8e93;
+  --pd-call-bg: #f5f5f7;
+  --pd-call-fg: #0a0a0c;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.phone-frame {
+  width: 100%;
+  max-width: none;
+  background: var(--pd-bg);
+  border-radius: 2.25rem;
+  padding: 0.55rem;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.phone-earpiece {
+  height: 0.28rem;
+  width: 22%;
+  margin: 0.35rem auto 0.45rem;
+  border-radius: 999px;
+  background: #000;
+  opacity: 0.55;
+}
+
+.phone-screen {
+  background: var(--pd-surface);
+  border-radius: 1.65rem;
+  padding: 0.95rem 0.8rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+}
+
+.dial-readouts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.dial-line {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.dial-line-hint {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pd-text-dim);
+  padding-left: 0.05rem;
+}
+
+.dial-line-input {
+  width: 100%;
+  font: inherit;
+  color: var(--pd-text);
+  background: var(--pd-raised);
+  border: 1px solid var(--pd-key-border);
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.55rem;
+  transition: border-color 0.12s ease;
+}
+
+.dial-line-input::placeholder {
+  color: var(--pd-text-dim);
+  opacity: 0.85;
+}
+
+.dial-line-input:focus {
+  outline: none;
+  border-color: rgba(245, 245, 247, 0.35);
+}
+
+.dial-line-input--sm {
+  font-size: 0.8125rem;
+}
+
+.dial-line-input--lg {
+  font-size: 1.35rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  padding-top: 0.62rem;
+  padding-bottom: 0.62rem;
+}
+
+.dial-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  padding-top: 0.15rem;
+}
+
+.dial-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.48rem;
+}
+
+.dial-key {
+  aspect-ratio: 1;
+  max-height: 3.65rem;
+  border-radius: 50%;
+  border: 1px solid var(--pd-key-border);
+  background: var(--pd-key);
+  color: var(--pd-text);
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition:
+    background 0.12s ease,
+    transform 0.08s ease;
+}
+
+.dial-key:hover:not(:disabled) {
+  background: #2e2e36;
+}
+
+.dial-key:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.dial-key:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dial-key-main {
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.dial-key-sub {
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--pd-text-dim);
+  margin-top: 0.06rem;
+  min-height: 0.68rem;
+}
+
+.dial-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.1rem;
+}
+
+.dial-backspace {
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 50%;
+  border: 1px solid var(--pd-key-border);
+  background: var(--pd-key);
+  color: var(--pd-text);
+  font-size: 1.12rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dial-backspace:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.dial-call {
+  flex: 1;
+  min-height: 3.35rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--pd-call-bg);
+  color: var(--pd-call-fg);
+  font: inherit;
+  font-size: 1.06rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  transition:
+    filter 0.12s ease,
+    transform 0.08s ease;
+}
+
+.dial-call:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+.dial-call:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.dial-call:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Collapsed advanced options — keeps the face clean */
+
+.dial-options {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--pd-key-border);
+  margin-top: 0.1rem;
+  padding-top: 0.45rem;
+}
+
+.dial-options-summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--pd-text-dim);
+  padding: 0.2rem 0;
+  user-select: none;
+}
+
+.dial-options-summary::-webkit-details-marker {
+  display: none;
+}
+
+.dial-options-summary::after {
+  content: ' ▸';
+  opacity: 0.7;
+}
+
+.dial-options[open] .dial-options-summary::after {
+  content: ' ▾';
+}
+
+.dial-options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.45rem 0 0.15rem;
+}
+
+.dial-options-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.dial-options-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pd-text-dim);
+}
+
+.dial-options-select {
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--pd-text);
+  background: var(--pd-raised);
+  border: 1px solid var(--pd-key-border);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.45rem;
+  cursor: pointer;
+}
+
+.dial-options-select:focus {
+  outline: none;
+  border-color: rgba(245, 245, 247, 0.35);
+}
+
+.dial-options-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  color: var(--pd-text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.dial-options-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--pd-call-bg);
+  flex-shrink: 0;
+}
+
+.dial-toast {
+  margin: 0;
+  font-size: 0.85rem;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  line-height: 1.4;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  background: var(--pd-raised);
+  border: 1px solid var(--pd-key-border);
+  color: var(--pd-text-dim);
+}
+
+.dial-toast--ok,
+.dial-toast--err {
+  color: var(--pd-text);
+}

@@ -181,6 +181,15 @@ export class CallService {
   }
 
   /**
+   * Lists recent calls from Mongo (newest `updatedAt` first). Limit is clamped to 1..500.
+   */
+  async listRecentCalls(limit: number): Promise<CallDocument[]> {
+    const cap = Math.min(500, Math.max(1, Math.floor(limit)));
+    const rows = await this.callRepository.listRecent(cap);
+    return rows.map((doc) => doc.toJSON() as CallDocument);
+  }
+
+  /**
    * Lists recent recording rows from Mongo (newest first). Limit is clamped to 1..500.
    */
   async listRecentRecordings(limit: number): Promise<RecordingDocument[]> {
