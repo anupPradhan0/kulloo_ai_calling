@@ -1,6 +1,6 @@
 # Kamailio in Kulloo
 
-> **Doc hub:** [Documentation index](../README.md) — see also [freeswitch.md](./freeswitch.md), [esl.md](./esl.md), [outbound-calls.md](./outbound-calls.md).
+> **Doc hub:** [Documentation index](README.md) — see also [freeswitch.md](freeswitch.md), [esl.md](esl.md), [outbound-calls.md](outbound-calls.md).
 
 This document describes how Kamailio operates as a SIP load balancer in front of the FreeSWITCH pool in Kulloo's production architecture, and why it was chosen over alternatives.
 

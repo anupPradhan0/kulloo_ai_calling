@@ -3,7 +3,7 @@ import type { ApiEndpoint } from './types'
 /**
  * User-facing HTTP surface only: health, placing a call via hello, and
  * reading recordings. Internal routes (carrier webhooks, Plivo XML, metrics,
- * local disk listing) are omitted — see `doc/reference/api.md` for the full map.
+ * local disk listing) are omitted — see `doc/api.md` for the full map.
  */
 export const API_ENDPOINTS: ApiEndpoint[] = [
   {

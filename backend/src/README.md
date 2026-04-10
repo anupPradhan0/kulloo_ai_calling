@@ -1,6 +1,6 @@
 # `backend/src` layout (humans and AI)
 
-Runtime source for the Kulloo API. **Narrative docs:** [`../../doc/README.md`](../../doc/README.md). **Every path under `backend/`:** [`../../doc/backend/backend-folder-structure.md`](../../doc/backend/backend-folder-structure.md).
+Runtime source for the Kulloo API. **Narrative docs:** [`../../doc/README.md`](../../doc/README.md). **Every path under `backend/`:** [`../../doc/backend-folder-structure.md`](../../doc/backend-folder-structure.md).
 
 ## HTTP request path
 

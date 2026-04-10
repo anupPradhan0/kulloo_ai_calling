@@ -4,7 +4,7 @@ TypeScript + Express + MongoDB backend with first end-to-end `hello-call` contra
 
 **Architecture and telephony (for people and AI assistants):** see [`doc/README.md`](../doc/README.md) in the repo root.
 
-**Production deploy on a server (Docker Compose):** see [`doc/ops/deployment.md`](../doc/ops/deployment.md) (overview) and [`Docker/README.md`](../Docker/README.md) (full detail).
+**Production deploy on a server (Docker Compose):** see [`doc/deployment.md`](../doc/deployment.md) (overview) and [`Docker/README.md`](../Docker/README.md) (full detail).
 
 **Quick map of this package’s `src/` tree:** [`src/README.md`](src/README.md).
 
@@ -21,9 +21,9 @@ TypeScript + Express + MongoDB backend with first end-to-end `hello-call` contra
 pnpm install
 ```
 
-2. Start MongoDB:
+2. Start MongoDB + Redis (minimal; uses the repo’s Compose stack):
 ```bash
-docker compose -f ../docker-compose.yml up -d --force-recreate
+docker compose -f ../Docker/docker-compose.yml up -d mongodb redis
 ```
 
 3. Configure env:

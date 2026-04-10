@@ -1,6 +1,6 @@
 # Stability and operations notes (Kulloo)
 
-> **Doc hub:** [Documentation index](../README.md) — call flows are under `doc/telephony/`, HTTP surface under `doc/reference/`.
+> **Doc hub:** [Documentation index](README.md) — call-flow docs and API reference are sibling files in this folder.
 
 This page is a practical “keep it running” reference: **failure modes**, **recovery mechanisms**, **idempotency**, and a short **debug checklist** that maps symptoms to the most likely layer (HTTP, Redis, Mongo, SIP, FreeSWITCH, ESL).
 
@@ -26,7 +26,7 @@ From the API:
 - `GET /api/health`
   - Readiness probe: checks **Mongo ping** and **Redis `PING`**.
 
-**Redis is required.** If `REDIS_URL` is missing or Redis is unreachable at startup, Kulloo exits instead of starting a “half-working” process. Details: [../reference/redis.md](../reference/redis.md).
+**Redis is required.** If `REDIS_URL` is missing or Redis is unreachable at startup, Kulloo exits instead of starting a “half-working” process. Details: [redis.md](redis.md).
 
 ---
 
@@ -77,14 +77,14 @@ Normal for the Plivo path until the media leg runs. If it stays there:
 - Dialplan `socket` target wrong host:port
 - Firewall blocks TCP to `ESL_OUTBOUND_PORT`
 
-See: [../telephony/esl.md](../telephony/esl.md), [../telephony/freeswitch.md](../telephony/freeswitch.md).
+See: [esl.md](esl.md), [freeswitch.md](freeswitch.md).
 
 ### 5.3 “No audio” / silent call
 
 - FreeSWITCH SDP advertises a private IP; set `external_sip_ip` / `ext-rtp-ip` to the server public IP in `vars.fs*.xml`.
 - RTP UDP range blocked by firewall.
 
-See: [../telephony/kamailio.md](../telephony/kamailio.md), [../telephony/freeswitch.md](../telephony/freeswitch.md).
+See: [kamailio.md](kamailio.md), [freeswitch.md](freeswitch.md).
 
 ### 5.4 Recording exists but is empty / very small
 
@@ -120,10 +120,10 @@ If S3 upload failed, status becomes `failed` and the local WAV is intentionally 
 
 ## 7. Related docs
 
-- [../telephony/outbound-calls.md](../telephony/outbound-calls.md)
-- [../telephony/inbound-call-dataflow.md](../telephony/inbound-call-dataflow.md)
-- [../telephony/esl.md](../telephony/esl.md)
-- [../telephony/freeswitch.md](../telephony/freeswitch.md)
-- [../reference/redis.md](../reference/redis.md)
-- [../reference/api.md](../reference/api.md)
+- [outbound-calls.md](outbound-calls.md)
+- [inbound-call-dataflow.md](inbound-call-dataflow.md)
+- [esl.md](esl.md)
+- [freeswitch.md](freeswitch.md)
+- [redis.md](redis.md)
+- [api.md](api.md)
 

@@ -1,6 +1,6 @@
 # Hello-Call Contract
 
-> **Doc hub:** [Documentation index](../README.md) — telephony and API details live under `doc/telephony/` and `doc/reference/`.
+> **Doc hub:** [Documentation index](README.md) — telephony and API details are sibling files in this folder (e.g. [outbound-calls.md](outbound-calls.md), [api.md](api.md)).
 
 ## Purpose
 Lock the first production-like call flow before larger architecture changes.

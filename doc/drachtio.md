@@ -1,6 +1,6 @@
 # Drachtio in Kulloo (Flow B)
 
-> **Doc hub:** [Documentation index](../README.md) — see also [kamailio.md](./kamailio.md), [freeswitch.md](./freeswitch.md), [esl.md](./esl.md).
+> **Doc hub:** [Documentation index](README.md) — see also [kamailio.md](kamailio.md), [freeswitch.md](freeswitch.md), [esl.md](esl.md).
 
 This document describes **Flow B** — an optional Drachtio-based SIP signaling path that replaces Kamailio while keeping FreeSWITCH, ESL, MongoDB, and Redis identical to Flow A.
 
@@ -21,7 +21,7 @@ Flow B is **opt-in**. Flow A (Kamailio) remains the default and is not affected.
 | **Redis** | Idempotency + webhook dedupe | Same — zero change |
 | **HTTP routes** | All `/api/*` routes | Same — zero change |
 | **KullooCallId** | Passed through by Kamailio `t_relay()` | Passed through by `srf.proxyRequest()` |
-| **Docker** | `docker-compose.kamailio.yml` | `docker-compose.drachtio.yml` |
+| **Docker** | `Docker/docker-compose.yml` | `Docker/docker-compose.flow-b.yml` |
 
 ---
 
@@ -217,31 +217,17 @@ In Flow B, `srf.proxyRequest(req, target, { remainInDialog: true })` achieves th
 
 ## 9. Running Flow B
 
-**`Docker/` default stack + Drachtio overlay** (from repo root — your usual Kamailio compose stays the base file):
+**Standalone Flow B file** (from repo root — do **not** run Flow A and Flow B Compose files at the same time; both want SIP **5060**):
 
 ```bash
 docker pull drachtio/drachtio-server:latest
 
-docker compose \
-  -f Docker/docker-compose.yml \
-  -f Docker/docker-compose.drachtio.yml \
-  up -d --build
-
-# Do not enable Kamailio’s profile while using this overlay (port 5060 conflict).
+docker compose -f Docker/docker-compose.flow-b.yml up -d --build
 ```
 
-**Repo-root alternate** (same idea as `docker-compose.server.yml` + overlay):
+See **[`Docker/README.md`](../../Docker/README.md)** for verify/stop commands and env notes.
 
-```bash
-docker compose \
-  -f docker-compose.server.yml \
-  -f docker-compose.drachtio.yml \
-  up -d
-
-# Do NOT add docker-compose.kamailio.yml — Kamailio is not used in Flow B.
-```
-
-**Update Plivo:** Point your Plivo application's SIP Destination to `sip:1000@<your-host>:5060` (Drachtio) instead of Kamailio.
+**Update Plivo:** Point your Plivo application's SIP destination at Drachtio’s public **5060** (instead of Kamailio) when using Flow B.
 
 ---
 
@@ -258,7 +244,7 @@ docker compose \
 | Bootstrap wiring | `backend/src/server.ts` |
 | Env vars | `backend/src/config/env.ts` |
 | Type declarations | `backend/src/types/drachtio.d.ts` |
-| Docker compose | `Docker/docker-compose.drachtio.yml` (merge with `Docker/docker-compose.yml`); or root `docker-compose.drachtio.yml` + `docker-compose.server.yml` |
+| Docker compose | [`Docker/docker-compose.flow-b.yml`](../../Docker/docker-compose.flow-b.yml) |
 
 ---
 

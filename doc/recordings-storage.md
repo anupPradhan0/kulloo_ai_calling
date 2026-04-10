@@ -1,6 +1,6 @@
 # Recording storage (local + S3) in Kulloo
 
-> **Doc hub:** [Documentation index](../README.md) — API surface under `doc/reference/`, ESL and FreeSWITCH under `doc/telephony/`.
+> **Doc hub:** [Documentation index](README.md) — API surface: [api.md](api.md); ESL / FreeSWITCH: [esl.md](esl.md), [freeswitch.md](freeswitch.md).
 
 Kulloo always produces recordings as **local WAV files** via FreeSWITCH + ESL. Optionally, it can **upload finalized WAVs to S3** and serve playback via **pre-signed URLs**.
 

@@ -1,6 +1,6 @@
 # Call-control flows (Kulloo)
 
-> **Doc hub:** [Documentation index](../../README.md) — telephony primitives are under `doc/telephony/`.
+> **Doc hub:** [Documentation index](README.md) — telephony primitives are sibling files in this `doc/` folder (e.g. [kamailio.md](kamailio.md), [esl.md](esl.md)).
 
 Kulloo currently supports **two call-control flows**. They differ only in the **SIP signaling edge**. Everything after the SIP leg lands on FreeSWITCH (ESL, recordings, Mongo persistence, Redis requirements, HTTP API) is shared.
 
@@ -25,10 +25,10 @@ Kulloo always relies on **FreeSWITCH + outbound ESL** (`socket ... async full`) 
 
 ## If you are an AI agent: which file should you edit?
 
-- **Need to change SIP routing / load balancing (Flow A):** start at [../kamailio.md](../kamailio.md) and the Compose files under `Docker/`.
-- **Need to change SIP proxy behavior in Node (Flow B):** start at [../drachtio.md](../drachtio.md) and `backend/src/services/drachtio/`.
-- **Need to change the hello media flow (answer/play/record/DTMF):** start at [../esl.md](../esl.md) and `backend/src/services/freeswitch/esl-call-handler.service.ts`.
-- **Need to change what the HTTP API does (create call, callbacks, recordings):** start at [../../reference/api.md](../../reference/api.md) and `backend/src/modules/`.
+- **Need to change SIP routing / load balancing (Flow A):** start at [kamailio.md](kamailio.md) and the Compose files under `Docker/`.
+- **Need to change SIP proxy behavior in Node (Flow B):** start at [drachtio.md](drachtio.md) and `backend/src/services/drachtio/`.
+- **Need to change the hello media flow (answer/play/record/DTMF):** start at [esl.md](esl.md) and `backend/src/services/freeswitch/esl-call-handler.service.ts`.
+- **Need to change what the HTTP API does (create call, callbacks, recordings):** start at [api.md](api.md) and `backend/src/modules/`.
 
 ---
 
@@ -41,6 +41,5 @@ These are **call directions**, not flows:
 
 Full docs:
 
-- [../inbound-call-dataflow.md](../inbound-call-dataflow.md)
-- [../outbound-calls.md](../outbound-calls.md)
-
+- [inbound-call-dataflow.md](inbound-call-dataflow.md)
+- [outbound-calls.md](outbound-calls.md)

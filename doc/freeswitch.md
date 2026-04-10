@@ -1,6 +1,6 @@
 # FreeSWITCH in Kulloo
 
-> **Doc hub:** [Documentation index](../README.md) — ESL and call flows are in the other `doc/telephony/` files.
+> **Doc hub:** [Documentation index](README.md) — ESL and call flows are sibling docs in this folder.
 
 This document describes **what FreeSWITCH does** in this project, **how the checked-in configuration is structured**, and the **end-to-end data flow** from SIP/RTP through FreeSWITCH to the Kulloo backend (MongoDB, recordings). It matches the files under `freeswitch/conf/` and the backend ESL handler in `backend/src/services/freeswitch/esl-call-handler.service.ts`.
 
@@ -134,14 +134,13 @@ sequenceDiagram
 
 ## 7. Docker and compose
 
-Paths differ by compose file:
+Production stacks live under **`Docker/`** (see [`Docker/README.md`](../../Docker/README.md)):
 
 | File | How FreeSWITCH config is supplied |
 |------|-------------------------------------|
-| **`docker-compose.server.yml`** | Runs **`fs1`** and **`fs2`** natively. Mounts `freeswitch/conf` and overrides `vars.xml` per-instance (e.g. `vars.fs1.xml`). Exposes unique host SIP ports (`5070`, `5071`) mapped to container `5070`, and unique RTP ranges. |
-| **`docker-compose.kamailio.yml`** | Standalone Kamailio proxy on the shared `kulloo_net` network. Uses Docker DNS to distribute load to `fs1` and `fs2`. |
+| **`Docker/docker-compose.yml`** (Flow A) | Runs **`fs1`** and **`fs2`** plus Kamailio and the API. Mounts `freeswitch/conf` and per-instance vars (`vars.fs1.xml`, `vars.fs2.xml`), publishes SIP host ports **5070** / **5071**, and non-overlapping RTP ranges. |
 
-Firewall rules must allow **SIP** (UDP/TCP 5060) to Kamailio, **RTP** UDP ranges directly to the FS host IPs, and local Docker networking for ESL port **3200**.
+Firewall rules must allow **SIP** (UDP/TCP **5060**) to Kamailio (Flow A) or Drachtio (Flow B), **RTP** UDP ranges to the FreeSWITCH instances, and **TCP** from FreeSWITCH to Kulloo **`ESL_OUTBOUND_PORT`** (default **3200**).
 
 ---
 
@@ -161,10 +160,10 @@ Firewall rules must allow **SIP** (UDP/TCP 5060) to Kamailio, **RTP** UDP ranges
 | Doc | Topic |
 |-----|--------|
 | [esl.md](./esl.md) | What ESL is, outbound socket vs FS:8021, data flow |
-| [inbound-call-dataflow.md](./inbound-call-dataflow.md) | Inbound DID → Answer URL → FS → ESL → Mongo |
-| [outbound-calls.md](./outbound-calls.md) | Outbound API → Plivo → FS → ESL, `KullooCallId` |
-| [api.md](../reference/api.md) | HTTP routes, callbacks |
-| [ops/stability.md](../ops/stability.md) | Idempotency, recovery loops, debugging checklist |
+| [inbound-call-dataflow.md](inbound-call-dataflow.md) | Inbound DID → Answer URL → FS → ESL → Mongo |
+| [outbound-calls.md](outbound-calls.md) | Outbound API → Plivo → FS → ESL, `KullooCallId` |
+| [api.md](api.md) | HTTP routes, callbacks |
+| [stability.md](stability.md) | Idempotency, recovery loops, debugging checklist |
 
 **Backend:** `backend/src/server.ts` (ESL port), `backend/src/services/freeswitch/esl-call-handler.service.ts` (call flow).
 

@@ -1,6 +1,6 @@
 # Flow A (default): Kamailio → FreeSWITCH → ESL
 
-> **Doc hub:** [Documentation index](../../README.md) — Flow B is [flow-b-drachtio.md](flow-b-drachtio.md).
+> **Doc hub:** [Documentation index](README.md) — Flow B is [flow-b-drachtio.md](flow-b-drachtio.md).
 
 Flow A is the default production layout:
 
@@ -31,10 +31,10 @@ Use Flow A when you want:
 
 ## Related docs
 
-- [../kamailio.md](../kamailio.md)
-- [../outbound-calls.md](../outbound-calls.md)
-- [../inbound-call-dataflow.md](../inbound-call-dataflow.md)
-- [../esl.md](../esl.md)
-- [../freeswitch.md](../freeswitch.md)
-- [../../ops/stability.md](../../ops/stability.md)
+- [kamailio.md](kamailio.md)
+- [outbound-calls.md](outbound-calls.md)
+- [inbound-call-dataflow.md](inbound-call-dataflow.md)
+- [esl.md](esl.md)
+- [freeswitch.md](freeswitch.md)
+- [stability.md](stability.md)
 

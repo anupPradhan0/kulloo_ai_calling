@@ -1,6 +1,6 @@
 # Flow B (opt-in): Drachtio → FreeSWITCH → ESL
 
-> **Doc hub:** [Documentation index](../../README.md) — Flow A is [flow-a-kamailio.md](flow-a-kamailio.md).
+> **Doc hub:** [Documentation index](README.md) — Flow A is [flow-a-kamailio.md](flow-a-kamailio.md).
 
 Flow B replaces the SIP edge (Kamailio) with **Drachtio**, while keeping the rest of the system the same.
 
@@ -33,14 +33,14 @@ Flow B is useful when you want SIP signaling behavior to be controlled from Node
 
 The deep Flow B detail is documented here:
 
-- [../drachtio.md](../drachtio.md)
+- [drachtio.md](drachtio.md)
 
 ---
 
 ## Related docs
 
-- [../drachtio.md](../drachtio.md)
-- [../esl.md](../esl.md)
-- [../freeswitch.md](../freeswitch.md)
-- [../../ops/stability.md](../../ops/stability.md)
+- [drachtio.md](drachtio.md)
+- [esl.md](esl.md)
+- [freeswitch.md](freeswitch.md)
+- [stability.md](stability.md)
 

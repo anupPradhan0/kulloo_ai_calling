@@ -21,7 +21,7 @@ Both flows keep the rest identical:
 - **MongoDB** + **Redis** are unchanged
 - HTTP API stays on **5000**
 
-Detailed Flow B design: [`doc/telephony/drachtio.md`](../doc/telephony/drachtio.md)
+Detailed Flow B design: [`doc/drachtio.md`](../doc/drachtio.md)
 
 ---
 
@@ -117,21 +117,6 @@ docker compose -f Docker/docker-compose.flow-b.yml down
 
 ---
 
-## About `docker-compose.drachtio.yml` (overlay)
+## Historical note (overlays)
 
-`Docker/docker-compose.drachtio.yml` exists as an **overlay** that you can merge onto `Docker/docker-compose.yml` to “switch” to Drachtio while keeping the base file. If you prefer simplicity, ignore it and use the standalone Flow B file (`docker-compose.flow-b.yml`).
-
-Overlay run (optional):
-
-```bash
-docker compose \
-  -f Docker/docker-compose.yml \
-  -f Docker/docker-compose.drachtio.yml \
-  up -d --build
-```
-
----
-
-## Repo-root alternative layout
-
-The repo root also contains `docker-compose.server.yml` + overlays. This `Docker/` layout is the recommended “single-folder deployment” entry point; the root layout is equivalent but uses different relative paths.
+Some forks or older notes referred to a **`docker-compose.drachtio.yml` overlay** merged onto `docker-compose.yml`. **This repository** ships Flow B as a **single** file instead: [`docker-compose.flow-b.yml`](docker-compose.flow-b.yml). Do not run Flow A and Flow B stacks at once (both bind SIP **5060**).

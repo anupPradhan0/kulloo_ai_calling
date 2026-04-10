@@ -1,6 +1,6 @@
 # Kulloo API Reference
 
-> **Doc hub:** [Documentation index](../README.md) — call flows and FreeSWITCH/ESL are under `doc/telephony/`.
+> **Doc hub:** [Documentation index](README.md) — call flows and FreeSWITCH/ESL are sibling docs in this folder (e.g. [esl.md](esl.md), [freeswitch.md](freeswitch.md)).
 
 Base URL (production): `https://kulloocall.anuppradhan.in`
 
@@ -8,7 +8,7 @@ All routes below are relative to the base URL.
 
 **Redis** (`REDIS_URL`) is **required**: the API exits on startup if it is missing or unreachable, and readiness always checks **`PING`**. See [redis.md](./redis.md).
 
-**ESL** (Event Socket: FreeSWITCH → Kulloo on `ESL_OUTBOUND_PORT`) drives the hello media flow; see [esl.md](../telephony/esl.md).
+**ESL** (Event Socket: FreeSWITCH → Kulloo on `ESL_OUTBOUND_PORT`) drives the hello media flow; see [esl.md](esl.md).
 
 **Recordings storage:** local WAV + optional S3 offload is documented in [recordings-storage.md](./recordings-storage.md).
 
@@ -21,7 +21,7 @@ All routes below are relative to the base URL.
 
 ## Calls
 
-Full outbound (Plivo → Kamailio → FreeSWITCH pool → ESL) architecture and data flow: see [outbound-calls.md](../telephony/outbound-calls.md).
+Full outbound (Plivo → Kamailio → FreeSWITCH pool → ESL) architecture and data flow: see [outbound-calls.md](outbound-calls.md).
 
 - `POST /api/calls/outbound/hello`
   - Runs the outbound “hello” flow

@@ -1,6 +1,6 @@
 # Kulloo backend — complete folder and file reference
 
-> **Doc hub:** [Documentation index](../README.md) — project overview and telephony docs live there.
+> **Doc hub:** [Documentation index](README.md) — project overview and telephony docs live in this folder.
 
 This document reflects **every directory** and **every file** under repository path **`backend/`** as of the last refresh.
 
@@ -149,10 +149,10 @@ backend/
     │   ├── recovery/
     │   │   ├── orphan-calls-recovery.service.ts
     │   │   └── recordings-sync.service.ts
-    │   └── redis/
-    │       ├── idempotency-cache.service.ts
-    │       ├── redis.client.ts
-    │       └── webhook-dedupe.service.ts
+    │   ├── redis/
+    │   │   ├── idempotency-cache.service.ts
+    │   │   ├── redis.client.ts
+    │   │   └── webhook-dedupe.service.ts
     │   └── storage/
     │       └── s3.service.ts
     ├── types/
@@ -177,7 +177,7 @@ backend/
 
 ## 4. Complete file inventory (every project file, excluding `node_modules/**`)
 
-Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' | sort`. **57** files total: **2** scripts, **46** `.ts` files under `src/`, **`src/README.md`**, **8** root project files.
+Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' | sort`. **58** files total: **2** scripts, **47** `.ts` files under `src/`, **`src/README.md`**, **8** root project files.
 
 | Path |
 |------|
@@ -230,6 +230,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | `src/services/redis/idempotency-cache.service.ts` |
 | `src/services/redis/redis.client.ts` |
 | `src/services/redis/webhook-dedupe.service.ts` |
+| `src/services/storage/s3.service.ts` |
 | `src/types/drachtio.d.ts` |
 | `src/types/express.d.ts` |
 | `src/utils/api-error.ts` |
@@ -261,6 +262,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | File | Purpose |
 |------|---------|
 | **`repeat-hello-calls.ts`** | Repeated outbound hello calls against a base URL for testing (`pnpm verify:hello`). |
+| **`load-test-kamailio.ts`** | Optional load / SIP-path testing helper (see script header). |
 
 ---
 
@@ -268,7 +270,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 | File | Purpose |
 |------|---------|
-| **`server.ts`** | Boot: MongoDB, Redis `assertRedisAvailable`, ESL outbound server, recovery timers, HTTP server, Redis shutdown hooks. |
+| **`server.ts`** | Boot: MongoDB, Redis `assertRedisAvailable`, Agent WebSocket (`/ws/agent`), ESL outbound server, recovery timers, **`createCallControlBackend()`** (Flow A/B), HTTP listen, Redis shutdown hooks. |
 | **`app.ts`** | Express app: CORS/helmet/morgan, JSON parsers, **`correlationIdMiddleware`**, **`registerPlivoWebhookRoutes`** (Plivo Answer/Hangup at `/plivo/*` and `/api/plivo/*`), **`/api`** router, error handlers. |
 
 ---
@@ -286,7 +288,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 | File | Purpose |
 |------|---------|
-| **`index.ts`** | Mounts `/health`, `/metrics`, `/calls`, `/recordings`; imports **`healthRouter`** from **`modules/health`**, **`callRouter`** and **`recordingRouter`** from **`modules/calls`**. |
+| **`index.ts`** | Mounts `/health`, `/metrics`, `/calls`, `/recordings`, `/agent`; imports **`healthRouter`** from **`modules/health`**, **`callRouter`** and **`recordingRouter`** from **`modules/calls`**, **`agentRouter`** from **`modules/agent`**. |
 | **`metrics.routes.ts`** | `GET /api/metrics` → **`metrics.snapshot()`**. |
 
 ---
@@ -336,6 +338,7 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 | **`drachtio/drachtio.client.ts`** | Creates shared `Srf` instance; wraps event-based `srf.connect()` in a Promise; exports `connectToDrachtio` / `disconnectFromDrachtio`. |
 | **`drachtio/drachtio-sip-handler.service.ts`** | Registers `srf.on('invite')` handler; reads `KullooCallId` header; calls `srf.proxyRequest()` to FreeSWITCH with `remainInDialog: true`. |
 | **`redis/*`** | ioredis client, idempotency cache, webhook dedupe. |
+| **`storage/s3.service.ts`** | S3 upload, presigned GET URLs, recording key paths (used by ESL + recording file handler). |
 | **`recovery/*`** | Orphan call sweep and recordings disk ↔ Mongo sync (use **`CallRepository`** / **`RecordingRepository`**). |
 | **`observability/metrics.service.ts`** | In-process metrics for `/api/metrics`. |
 
@@ -370,9 +373,9 @@ Sorted like `find backend -type f ! -path '*/node_modules/*' ! -path '*/dist/*' 
 
 ## Related documentation
 
-- [`reference/api.md`](../reference/api.md)
-- [`telephony/esl.md`](../telephony/esl.md), [`telephony/inbound-call-dataflow.md`](../telephony/inbound-call-dataflow.md), [`telephony/outbound-calls.md`](../telephony/outbound-calls.md)
-- [`reference/redis.md`](../reference/redis.md)
+- [`api.md`](api.md)
+- [`esl.md`](esl.md), [`inbound-call-dataflow.md`](inbound-call-dataflow.md), [`outbound-calls.md`](outbound-calls.md)
+- [`redis.md`](redis.md)
 
 ---
 

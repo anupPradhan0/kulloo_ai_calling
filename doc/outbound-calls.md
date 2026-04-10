@@ -1,6 +1,6 @@
 # Outbound calls (Kulloo)
 
-> **Doc hub:** [Documentation index](../README.md) — pair with [inbound-call-dataflow.md](./inbound-call-dataflow.md) and [esl.md](./esl.md).
+> **Doc hub:** [Documentation index](README.md) — pair with [inbound-call-dataflow.md](inbound-call-dataflow.md) and [esl.md](esl.md).
 
 This document describes how **outbound PSTN** (and related) calls work in Kulloo: architecture, **data flow**, identifiers, MongoDB shape, FreeSWITCH/ESL behavior, and configuration. It matches the current backend under `backend/`.
 
@@ -19,7 +19,7 @@ This document describes how **outbound PSTN** (and related) calls work in Kulloo
 | **FreeSWITCH** | Media plane: answer, tone, `record_session`, DTMF, hangup. (Or bridges to an Agent if `AGENT_MODE=webrtc`). |
 | **ESL (Event Socket, outbound mode)** | Node listens on `ESL_OUTBOUND_PORT`; FreeSWITCH `socket` app connects **in** to Kulloo and runs the scripted flow in `esl-call-handler.service.ts`. |
 | **MongoDB** | `Call`, `CallEvent`, `Recording` — keyed by a stable business id plus provider-specific ids. |
-| **Redis (required)** | **`REDIS_URL`** must be set and reachable at startup: **idempotency cache** for repeat `Idempotency-Key` on outbound hello (Mongo stays authoritative); **dedupe** for recording webhooks. See [redis.md](../reference/redis.md). |
+| **Redis (required)** | **`REDIS_URL`** must be set and reachable at startup: **idempotency cache** for repeat `Idempotency-Key` on outbound hello (Mongo stays authoritative); **dedupe** for recording webhooks. See [redis.md](redis.md). |
 
 Recording for the **Plivo + FreeSWITCH** path is **not** primarily Plivo’s cloud recording for this hello flow; the WAV is written by **FreeSWITCH** under `RECORDINGS_DIR` and metadata is updated from ESL.
 
@@ -98,7 +98,7 @@ sequenceDiagram
 
 **Important:** The HTTP response from `POST /api/calls/outbound/hello` returns when **Plivo has accepted the dial** and the `Call` is **`connected`** (for `provider: "plivo"`). Final states (`answered`, `played`, `recording_started`, `hangup`, `completed`) and `Recording` rows are updated **asynchronously** by ESL while the call runs.
 
-**Redis:** `runOutboundHelloFlow` first checks an **idempotency cache** (hashed `Idempotency-Key` → Mongo `Call._id`) before hitting Mongo’s `findByIdempotencyKey`; after create or Mongo hit it **writes** the cache with TTL. **Mongo remains authoritative** (unique `idempotencyKey` index). Repeat requests with the same key still return the existing call **without** a second Plivo dial. Details: [redis.md](../reference/redis.md).
+**Redis:** `runOutboundHelloFlow` first checks an **idempotency cache** (hashed `Idempotency-Key` → Mongo `Call._id`) before hitting Mongo’s `findByIdempotencyKey`; after create or Mongo hit it **writes** the cache with TTL. **Mongo remains authoritative** (unique `idempotencyKey` index). Repeat requests with the same key still return the existing call **without** a second Plivo dial. Details: [redis.md](redis.md).
 
 ---
 
@@ -222,7 +222,7 @@ During recording, ESL subscribes to DTMF events. Digit **`1`** stops recording e
 | `ESL_OUTBOUND_PORT` | Port Kulloo listens on for FS outbound socket (e.g. 3200) |
 | `FREESWITCH_ESL_*` | Optional for inbound ESL client patterns; outbound socket is separate |
 | `REDIS_URL` | **Required** — idempotency cache + recording webhook dedupe; API fails startup without it; **`GET /api/health`** always includes Redis **PING** |
-| `REDIS_KEY_PREFIX`, `REDIS_IDEMPOTENCY_TTL_SEC`, `REDIS_WEBHOOK_DEDUPE_TTL_SEC` | Optional tuning; see [redis.md](../reference/redis.md) |
+| `REDIS_KEY_PREFIX`, `REDIS_IDEMPOTENCY_TTL_SEC`, `REDIS_WEBHOOK_DEDUPE_TTL_SEC` | Optional tuning; see [redis.md](redis.md) |
 
 ---
 
@@ -258,11 +258,11 @@ During recording, ESL subscribes to DTMF events. Digit **`1`** stops recording e
 
 ## 15. Related docs
 
-- [api.md](../reference/api.md) — HTTP surface
-- [esl.md](./esl.md) — ESL concepts and data flow (FreeSWITCH → Kulloo)
-- [redis.md](../reference/redis.md) — required Redis (outbound idempotency cache, webhook dedupe, health)
-- [hello-call-contract.md](../product/hello-call-contract.md) — hello contracts (outbound + real inbound via FS)
-- [ops/stability.md](../ops/stability.md) — operational stability, recovery loops, debugging checklist
+- [api.md](api.md) — HTTP surface
+- [esl.md](esl.md) — ESL concepts and data flow (FreeSWITCH → Kulloo)
+- [redis.md](redis.md) — required Redis (outbound idempotency cache, webhook dedupe, health)
+- [hello-call-contract.md](hello-call-contract.md) — hello contracts (outbound + real inbound via FS)
+- [stability.md](stability.md) — operational stability, recovery loops, debugging checklist
 
 ---
 

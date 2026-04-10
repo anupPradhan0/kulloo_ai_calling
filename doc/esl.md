@@ -1,6 +1,6 @@
 # ESL (Event Socket) in Kulloo
 
-> **Doc hub:** [Documentation index](../README.md) — inbound/outbound flows and FreeSWITCH config are sibling docs in `doc/telephony/`.
+> **Doc hub:** [Documentation index](README.md) — inbound/outbound flows and FreeSWITCH config are sibling docs in this folder.
 
 This document explains **what ESL is**, **how Kulloo uses it**, and the **data flow** from FreeSWITCH to the Node backend and MongoDB. It is a conceptual guide; implementation details live in the source files referenced below.
 
@@ -150,10 +150,10 @@ Firewall: allow **TCP** from the FreeSWITCH host to **`ESL_OUTBOUND_PORT`** on t
 
 ## 10. Related documentation
 
-- [`freeswitch.md`](./freeswitch.md) — FreeSWITCH config, `socket` vs ESL port 8021, Docker.
-- [`inbound-call-dataflow.md`](./inbound-call-dataflow.md) — Inbound DID → Answer URL → FS → ESL.
-- [`outbound-calls.md`](./outbound-calls.md) — Outbound API, Plivo, `KullooCallId`, ESL attach.
-- [`hello-call-contract.md`](../product/hello-call-contract.md) — Hello contract and acceptance notes.
+- [`freeswitch.md`](freeswitch.md) — FreeSWITCH config, `socket` vs ESL port 8021, Docker.
+- [`inbound-call-dataflow.md`](inbound-call-dataflow.md) — Inbound DID → Answer URL → FS → ESL.
+- [`outbound-calls.md`](outbound-calls.md) — Outbound API, Plivo, `KullooCallId`, ESL attach.
+- [`hello-call-contract.md`](hello-call-contract.md) — Hello contract and acceptance notes.
 
 ---
 

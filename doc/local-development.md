@@ -1,6 +1,6 @@
 # Local development quickstart (Kulloo)
 
-> **Doc hub:** [Documentation index](../README.md) — deployment is in [deployment.md](deployment.md).
+> **Doc hub:** [Documentation index](README.md) — deployment is in [deployment.md](deployment.md).
 
 This page is for getting a working local stack fast (API + Mongo + Redis, and optionally FreeSWITCH/Kamailio via Compose) and for the most common “why is nothing happening” issues.
 
@@ -51,7 +51,7 @@ If readiness is **503**, fix `MONGODB_URI` / `REDIS_URL` first (Redis is require
 The repo contains both root compose examples and a production-oriented set under `Docker/`.
 
 - Recommended path to start: [deployment.md](deployment.md) (even for local Docker, it points to the authoritative Compose docs).
-- Telephony details: [../telephony/outbound-calls.md](../telephony/outbound-calls.md), [../telephony/inbound-call-dataflow.md](../telephony/inbound-call-dataflow.md).
+- Telephony details: [outbound-calls.md](outbound-calls.md), [inbound-call-dataflow.md](inbound-call-dataflow.md).
 
 Key things to align:
 
@@ -82,7 +82,7 @@ Key things to align:
 
 | Symptom | Likely cause | Fix |
 |--------|--------------|-----|
-| API exits at startup | Redis missing/unreachable | Set `REDIS_URL` and start Redis; see [../reference/redis.md](../reference/redis.md) |
+| API exits at startup | Redis missing/unreachable | Set `REDIS_URL` and start Redis; see [redis.md](redis.md) |
 | `GET /api/health` is 503 | Mongo or Redis down | Fix `MONGODB_URI` / `REDIS_URL` |
 | Calls never progress beyond `connected` | FS can’t reach Kulloo `ESL_OUTBOUND_PORT` | Fix dialplan `socket` host:port, networking, firewall |
 | No recordings visible via API | FS and backend don’t share `RECORDINGS_DIR` | Use a shared volume/mount |
@@ -94,7 +94,7 @@ Key things to align:
 
 - [deployment.md](deployment.md)
 - [stability.md](stability.md)
-- [../reference/api.md](../reference/api.md)
-- [../reference/redis.md](../reference/redis.md)
-- [../telephony/esl.md](../telephony/esl.md)
+- [api.md](api.md)
+- [redis.md](redis.md)
+- [esl.md](esl.md)
 

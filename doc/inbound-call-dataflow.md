@@ -1,6 +1,6 @@
 # Inbound calls (Kulloo)
 
-> **Doc hub:** [Documentation index](../README.md) — pair with [outbound-calls.md](./outbound-calls.md) and [esl.md](./esl.md).
+> **Doc hub:** [Documentation index](README.md) — pair with [outbound-calls.md](outbound-calls.md) and [esl.md](esl.md).
 
 This document describes how **inbound** PSTN/SIP calls reach Kulloo, how they differ from **outbound**, and the **data flow** from the carrier edge through FreeSWITCH to MongoDB. It matches the current backend under `backend/` and the ESL handler in `esl-call-handler.service.ts`.
 
@@ -24,7 +24,7 @@ There is **no** dedicated HTTP route like “`POST /api/calls/inbound`”. The *
 
 ## 2. Inbound vs outbound (same ESL, different `Call` creation)
 
-| Aspect | **Inbound** (this doc) | **Outbound** ([outbound-calls.md](./outbound-calls.md)) |
+| Aspect | **Inbound** (this doc) | **Outbound** ([outbound-calls.md](outbound-calls.md)) |
 |--------|-------------------------|----------------------------------------|
 | Who creates `Call` first | ESL (`findOrCreateByProviderCallId`) | `POST /api/calls/outbound/hello` before Plivo dials |
 | `direction` | `"inbound"` | `"outbound"` (patched when ESL attaches) |
@@ -159,7 +159,7 @@ File: `backend/src/services/freeswitch/esl-call-handler.service.ts`.
 ## 8. Recordings on disk and HTTP
 
 - WAV path: **`RECORDINGS_DIR`/`{channelUuid}.wav`** (inside containers, often shared volume with FreeSWITCH).
-- List/stream: **`GET /api/recordings/local`**, **`GET /api/recordings/local/:callUuid`** (see [api.md](../reference/api.md)).
+- List/stream: **`GET /api/recordings/local`**, **`GET /api/recordings/local/:callUuid`** (see [api.md](api.md)).
 
 If backend and FreeSWITCH use **different** directories, the API can list **empty** while FS has files — use one shared mount in production.
 
@@ -174,13 +174,13 @@ Started from `server.ts`:
 | **Orphan call sweep** (`ORPHAN_GRACE_MS`, `ORPHAN_SWEEP_INTERVAL_MS`) | Marks stale non-terminal calls (e.g. backend restarted mid-call) |
 | **Recordings sync** (`RECORDINGS_SYNC_GRACE_MS`, `RECORDINGS_SYNC_INTERVAL_MS`) | Backfills `Recording` rows from WAV files on disk |
 
-Stability and operations notes live in [../ops/stability.md](../ops/stability.md).
+Stability and operations notes live in [stability.md](stability.md).
 
 ### Redis (`REDIS_URL`, required)
 
 Redis is **not** on the Plivo → Answer URL → FreeSWITCH → ESL path itself (no Redis lookup during ESL). The API **requires** Redis at startup. It **does** affect **HTTP recording webhooks** when you use provider-hosted recording callbacks:
 
-- **`POST /api/calls/callbacks/plivo/recording`**, **`…/twilio/recording`**, **`…/freeswitch/recording`** — duplicate deliveries of the **same** callback identity are answered with **`200`** and `{ success: true, duplicate: true }` without re-running ingestion (`SET … NX` with TTL). See [redis.md](../reference/redis.md).
+- **`POST /api/calls/callbacks/plivo/recording`**, **`…/twilio/recording`**, **`…/freeswitch/recording`** — duplicate deliveries of the **same** callback identity are answered with **`200`** and `{ success: true, duplicate: true }` without re-running ingestion (`SET … NX` with TTL). See [redis.md](redis.md).
 
 The **primary** inbound hello recording path here is **FreeSWITCH WAV + ESL**; Plivo/Twilio recording callbacks matter when you integrate those providers’ recording webhooks for the same or other flows.
 
@@ -190,7 +190,7 @@ The **primary** inbound hello recording path here is **FreeSWITCH WAV + ESL**; P
 
 - HTTP: **`X-Correlation-Id`** on Plivo Answer requests (Express middleware).
 - ESL logs: structured fields such as `callId`, `callSid`, `channelUuid`, `correlationId` (from the **Call** document once known).
-- **`GET /api/metrics`**: active calls, failed calls, recording failures, DTMF count; also **`redisIdempotencyHits`**, **`redisIdempotencyMisses`**, **`webhookDedupeSkips`** (see [redis.md](../reference/redis.md)).
+- **`GET /api/metrics`**: active calls, failed calls, recording failures, DTMF count; also **`redisIdempotencyHits`**, **`redisIdempotencyMisses`**, **`webhookDedupeSkips`** (see [redis.md](redis.md)).
 - **`GET /api/health`**: readiness always includes a Redis **`PING`**; failure returns **503** until Redis responds.
 
 ---
@@ -224,11 +224,11 @@ The **primary** inbound hello recording path here is **FreeSWITCH WAV + ESL**; P
 
 ## 13. Related docs
 
-- [outbound-calls.md](./outbound-calls.md) — outbound Plivo + `KullooCallId` attach path
-- [hello-call-contract.md](../product/hello-call-contract.md) — hello contract summary
-- [api.md](../reference/api.md) — full HTTP surface
-- [esl.md](./esl.md) — what ESL is, Kulloo usage, data flow
-- [redis.md](../reference/redis.md) — required Redis (webhook dedupe, health, metrics, startup)
+- [outbound-calls.md](outbound-calls.md) — outbound Plivo + `KullooCallId` attach path
+- [hello-call-contract.md](hello-call-contract.md) — hello contract summary
+- [api.md](api.md) — full HTTP surface
+- [esl.md](esl.md) — what ESL is, Kulloo usage, data flow
+- [redis.md](redis.md) — required Redis (webhook dedupe, health, metrics, startup)
 
 ---
 

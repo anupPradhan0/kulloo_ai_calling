@@ -1,6 +1,6 @@
 # Redis in Kulloo
 
-> **Doc hub:** [Documentation index](../README.md) — HTTP surface and telephony context are linked from there.
+> **Doc hub:** [Documentation index](README.md) — HTTP surface and telephony context are linked from there.
 
 Redis is **required** for the Kulloo API process: **`REDIS_URL`** must be set and Redis must answer **`PING`** before the HTTP server and ESL bootstrap continue. If either fails, startup exits with an error.
 
@@ -131,11 +131,10 @@ Duplicate responses are still **HTTP 200** so providers stop retrying; they are 
 
 | Compose file | Redis |
 |--------------|--------|
-| [`docker-compose.yml`](../../docker-compose.yml) | `redis` service, host port **6379**. |
-| [`docker-compose.server.yml`](../../docker-compose.server.yml) | `redis` + `REDIS_URL=redis://redis:6379` on `api`. |
-| [`docker-compose.redis.yml`](../../docker-compose.redis.yml) | Redis-only stack for local use. |
+| [`Docker/docker-compose.yml`](../../Docker/docker-compose.yml) | `redis` service; `REDIS_URL=redis://redis:6379` on `api` (Flow A stack). |
+| [`Docker/docker-compose.flow-b.yml`](../../Docker/docker-compose.flow-b.yml) | Same pattern in the Flow B stack. |
 
-Use **`redis://localhost:6379`** from the host when Redis is bound on localhost (dev or compose port publish).
+Use **`redis://localhost:6379`** from the host when Redis publishes **6379** to localhost (adjust if you remap the port).
 
 **Port conflict:** Only one process should bind host **6379** at a time, or change the published port and adjust `REDIS_URL`.
 

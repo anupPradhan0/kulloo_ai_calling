@@ -6,7 +6,7 @@ Use this doc when you are an **AI coding agent** and you need to decide **where 
 
 > [!IMPORTANT]
 > This doc intentionally does **not** list the internal `backend/` file tree.
-> For backend file placement and the full backend inventory, use: **[backend/backend-folder-structure.md](backend/backend-folder-structure.md)**.
+> For backend file placement and the full backend inventory, use: **[backend-folder-structure.md](backend-folder-structure.md)**.
 
 ---
 
@@ -14,11 +14,11 @@ Use this doc when you are an **AI coding agent** and you need to decide **where 
 
 If you need to change…
 
-- **HTTP API / Mongo models / Redis logic / recordings endpoints** → start in `backend/` + **[reference/api.md](reference/api.md)** / **[reference/redis.md](reference/redis.md)**
-- **Hello media behavior (answer/play/record/DTMF)** → `backend/` (ESL handler) + `freeswitch/` (dialplan trigger); read **[telephony/esl.md](telephony/esl.md)** + **[telephony/freeswitch.md](telephony/freeswitch.md)**
-- **SIP edge Flow A (Kamailio)** → `kamailio/` + `Docker/`; read **[telephony/kamailio.md](telephony/kamailio.md)**
-- **SIP edge Flow B (Drachtio)** → `backend/` + `Docker/`; read **[telephony/drachtio.md](telephony/drachtio.md)**
-- **Ports/volumes/services in deployment** → `Docker/`; read **[ops/deployment.md](ops/deployment.md)**
+- **HTTP API / Mongo models / Redis logic / recordings endpoints** → start in `backend/` + **[api.md](api.md)** / **[redis.md](redis.md)**
+- **Hello media behavior (answer/play/record/DTMF)** → `backend/` (ESL handler) + `freeswitch/` (dialplan trigger); read **[esl.md](esl.md)** + **[freeswitch.md](freeswitch.md)**
+- **SIP edge Flow A (Kamailio)** → `kamailio/` + `Docker/`; read **[kamailio.md](kamailio.md)**
+- **SIP edge Flow B (Drachtio)** → `backend/` + `Docker/`; read **[drachtio.md](drachtio.md)**
+- **Ports/volumes/services in deployment** → `Docker/`; read **[deployment.md](deployment.md)**
 
 ---
 
@@ -48,14 +48,14 @@ Production-oriented Docker Compose entrypoint and deployment notes.
   - `Docker/docker-compose.yml`: **Flow A** (Kamailio) stack
   - `Docker/docker-compose.flow-b.yml`: **Flow B** (Drachtio) stack
 - **Use when**: changing deployment wiring, ports, volumes, or which services run together.
-- **Related docs**: [ops/deployment.md](ops/deployment.md), [telephony/flows/README.md](telephony/flows/README.md).
+- **Related docs**: [deployment.md](deployment.md), [flows.md](flows.md).
 
 ### `backend/`
 
 The Node/Express API and all call persistence + ESL server code.
 
 - **Use when**: changing HTTP routes, Mongo models, Redis behavior, ESL handler, providers, etc.
-- **AI rule**: do not guess file locations—use **[backend/backend-folder-structure.md](backend/backend-folder-structure.md)**.
+- **AI rule**: do not guess file locations—use **[backend-folder-structure.md](backend-folder-structure.md)**.
 
 ### `doc/`
 
@@ -70,7 +70,7 @@ Checked-in FreeSWITCH configuration (`freeswitch/conf/**`) used by the Docker st
 
 - **What it’s for**: the hello dialplan and core FS settings (ports, context, vars).
 - **Use when**: changing the dialplan trigger, SIP profile settings, or ESL socket target variables.
-- **Related docs**: [telephony/freeswitch.md](telephony/freeswitch.md), [telephony/esl.md](telephony/esl.md).
+- **Related docs**: [freeswitch.md](freeswitch.md), [esl.md](esl.md).
 
 ### `frontend/`
 
@@ -85,7 +85,7 @@ Kamailio SIP proxy configuration for **Flow A** (default signaling edge).
 
 - **What lives here**: `kamailio.cfg`, `dispatcher.list`, `README.md`.
 - **Use when**: changing SIP routing/health checks/dispatcher pool in Flow A.
-- **Related docs**: [telephony/kamailio.md](telephony/kamailio.md), [telephony/flows/flow-a-kamailio.md](telephony/flows/flow-a-kamailio.md).
+- **Related docs**: [kamailio.md](kamailio.md), [flow-a-kamailio.md](flow-a-kamailio.md).
 
 ---
 
@@ -103,7 +103,7 @@ This section is **file-level** for the most important non-backend config folders
 | `freeswitch/conf/vars.fs1.xml` | **Instance override** for fs1 (especially advertise/external IP and RTP range). | When fixing “no audio”/NAT or changing fs1 RTP allocation. |
 | `freeswitch/conf/vars.fs2.xml` | **Instance override** for fs2 (especially advertise/external IP and RTP range). | When fixing “no audio”/NAT or changing fs2 RTP allocation. |
 
-Related docs: [telephony/freeswitch.md](telephony/freeswitch.md), [telephony/esl.md](telephony/esl.md), [ops/deployment.md](ops/deployment.md).
+Related docs: [freeswitch.md](freeswitch.md), [esl.md](esl.md), [deployment.md](deployment.md).
 
 ### `kamailio/` (what each file is for)
 
@@ -113,7 +113,7 @@ Related docs: [telephony/freeswitch.md](telephony/freeswitch.md), [telephony/esl
 | `kamailio/dispatcher.list` | Pool membership: which FreeSWITCH instances exist and how Kamailio routes to them. | When adding/removing FS instances or changing pool URIs. |
 | `kamailio/README.md` | Human/operator notes for running and checking dispatcher state. | When operational instructions change. |
 
-Related docs: [telephony/kamailio.md](telephony/kamailio.md), [telephony/flows/flow-a-kamailio.md](telephony/flows/flow-a-kamailio.md).
+Related docs: [kamailio.md](kamailio.md), [flow-a-kamailio.md](flow-a-kamailio.md).
 
 ### `Docker/` (what each file is for)
 
@@ -128,7 +128,7 @@ Related docs: [telephony/kamailio.md](telephony/kamailio.md), [telephony/flows/f
 Local recordings directory (WAV files) used by dev/compose volumes.
 
 - **Use when**: debugging “recordings not visible” issues; verifying shared mounts between FreeSWITCH and backend.
-- **Related docs**: [reference/api.md](reference/api.md) (local recordings endpoints), [ops/stability.md](ops/stability.md).
+- **Related docs**: [api.md](api.md) (local recordings endpoints), [stability.md](stability.md).
 
 ---
 
@@ -152,10 +152,10 @@ Git ignore rules for local/generated files.
 
 | You want to change… | Start in… | Then follow… |
 |---------------------|-----------|--------------|
-| HTTP route / request validation | `backend/` | [reference/api.md](reference/api.md), [backend/backend-folder-structure.md](backend/backend-folder-structure.md) |
-| Redis idempotency / webhook dedupe | `backend/` | [reference/redis.md](reference/redis.md) |
-| Hello media flow (answer/play/record/DTMF) | `backend/` + `freeswitch/` | [telephony/esl.md](telephony/esl.md), [telephony/freeswitch.md](telephony/freeswitch.md) |
-| Flow A SIP load balancing (Kamailio) | `kamailio/` + `Docker/` | [telephony/kamailio.md](telephony/kamailio.md) |
-| Flow B SIP signaling (Drachtio) | `backend/` + `Docker/` | [telephony/drachtio.md](telephony/drachtio.md), [telephony/flows/flow-b-drachtio.md](telephony/flows/flow-b-drachtio.md) |
-| Deployment ports/volumes/services | `Docker/` | [ops/deployment.md](ops/deployment.md) |
+| HTTP route / request validation | `backend/` | [api.md](api.md), [backend-folder-structure.md](backend-folder-structure.md) |
+| Redis idempotency / webhook dedupe | `backend/` | [redis.md](redis.md) |
+| Hello media flow (answer/play/record/DTMF) | `backend/` + `freeswitch/` | [esl.md](esl.md), [freeswitch.md](freeswitch.md) |
+| Flow A SIP load balancing (Kamailio) | `kamailio/` + `Docker/` | [kamailio.md](kamailio.md) |
+| Flow B SIP signaling (Drachtio) | `backend/` + `Docker/` | [drachtio.md](drachtio.md), [flow-b-drachtio.md](flow-b-drachtio.md) |
+| Deployment ports/volumes/services | `Docker/` | [deployment.md](deployment.md) |
 

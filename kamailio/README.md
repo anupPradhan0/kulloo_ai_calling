@@ -1,6 +1,6 @@
 # Kamailio — Kulloo SIP Load Balancer
 
-> **Architecture doc:** [doc/telephony/kamailio.md](../doc/telephony/kamailio.md)
+> **Architecture doc:** [doc/kamailio.md](../doc/kamailio.md)
 
 Kamailio acts as a pure **SIP signaling proxy** in front of the FreeSWITCH instance pool. It distributes inbound SIP INVITEs using round-robin, health-checks each FreeSWITCH with OPTIONS pings, and passes all SIP headers through untouched — including the critical `KullooCallId` header used for Mongo call correlation.
 
