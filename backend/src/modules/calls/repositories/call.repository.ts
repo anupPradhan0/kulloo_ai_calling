@@ -154,6 +154,33 @@ export class CallRepository {
   /**
    * Marks stale non-terminal calls as failed after grace period; excludes active provider ids when provided.
    */
+  /**
+   * Appends one AI voice transcript turn (Mongo $push).
+   */
+  async pushAiVoiceTurn(
+    id: string,
+    turn: { role: "user" | "assistant"; text: string; ts: Date },
+  ): Promise<void> {
+    if (!Types.ObjectId.isValid(id)) {
+      return;
+    }
+    await CallModel.findByIdAndUpdate(id, {
+      $push: { "aiVoice.turns": turn },
+    });
+  }
+
+  /**
+   * Sets async post-call operator summary (LLM) on the call document.
+   */
+  async setAiVoiceOperatorSummary(id: string, summary: string): Promise<void> {
+    if (!Types.ObjectId.isValid(id)) {
+      return;
+    }
+    await CallModel.findByIdAndUpdate(id, {
+      $set: { "aiVoice.operatorSummary": summary },
+    });
+  }
+
   async sweepStaleNonTerminalToFailed(
     cutoff: Date,
     excludeProviderCallIds: ReadonlySet<string> | undefined,

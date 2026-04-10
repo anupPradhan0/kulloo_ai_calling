@@ -53,6 +53,16 @@ Minimum vars you typically set (see `backend/.env.example` for the full list):
 
 Edit `freeswitch/conf/vars.fs1.xml` and `vars.fs2.xml` and ensure `external_sip_ip` is your server **public IP** (SDP/RTP). Wrong value = no audio / one-way audio.
 
+### FreeSWITCH container image (`docker pull` / `fs_cli`)
+
+Compose uses **`safarov/freeswitch:latest`** (Docker Hub). It ships FreeSWITCH 1.10.x with config under `/etc/freeswitch`, matching this repo’s `freeswitch/conf` layout.
+
+The name **`signalwire/freeswitch`** (for example `:v1.10`) is **not available on Docker Hub** for anonymous pulls: the repository page returns **404**, and `docker pull` fails with *pull access denied / repository does not exist*. That is a **missing public image**, not something fixed by `docker login` unless your organization publishes a private replacement.
+
+If you need a SignalWire-built container, build from the upstream [`signalwire/freeswitch` `docker/` directory](https://github.com/signalwire/freeswitch/tree/master/docker) or use a registry your team maintains.
+
+Inbound Event Socket (`fs_cli` on port **8021**) is configured in `freeswitch/conf/freeswitch.xml` with **`listen-ip` `0.0.0.0`**, so `mod_event_socket` binds in environments where a default IPv6-only `::` listen address fails inside Docker.
+
 ---
 
 ## Flow A (default): Kamailio stack

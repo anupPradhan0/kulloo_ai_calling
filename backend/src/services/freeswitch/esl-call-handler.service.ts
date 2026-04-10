@@ -21,6 +21,7 @@ import {
   isS3Enabled,
   uploadWavToS3,
 } from "../storage/s3.service";
+import { runAiVoiceEslFlow } from "../ai/ai-voice-esl.runner";
 
 /** Constructor options for the ESL TCP server: listen address, port, and where WAV files are written. */
 export interface EslCallHandlerOptions {
@@ -670,7 +671,124 @@ export class EslCallHandlerService {
     if (env.agentMode === "webrtc") {
       return this.executeAgentBridgeFlow(conn, input);
     }
+    if (env.agentMode === "ai_voice") {
+      return this.executeAiVoiceFlow(conn, input);
+    }
     return this.executeHelloFlow(conn, input);
+  }
+
+  /**
+   * AI voice loop (AGENT_MODE=ai_voice): Deepgram → OpenAI → VEXYL-TTS over ESL.
+   * Falls back to hello IVR when API keys are missing.
+   */
+  private async executeAiVoiceFlow(
+    conn: Connection,
+    input: {
+      callUuid: string;
+      fromRaw: string | null;
+      toRaw: string | null;
+      fromE164?: string;
+      toE164?: string;
+      callerName?: string;
+      kullooCallId?: string | null;
+    },
+  ): Promise<{ callId: string; recordingPath: string }> {
+    if (!env.deepgramApiKey || !env.openaiApiKey) {
+      this.log(null, "info", "AGENT_MODE=ai_voice but DEEPGRAM_API_KEY or OPENAI_API_KEY is unset — using hello IVR");
+      return this.executeHelloFlow(conn, input);
+    }
+
+    const from = input.fromE164 ?? input.fromRaw ?? "unknown";
+    const to = input.toE164 ?? input.toRaw ?? "unknown";
+    this.log(null, "info", `[ai-voice] Starting AI voice flow for ${input.callUuid} (${from} -> ${to})`);
+
+    const now = new Date();
+    const correlationId = randomUUID();
+
+    let call: CallDocument | null = null;
+    let created = false;
+    const kullooCallId = input.kullooCallId && typeof input.kullooCallId === "string" ? input.kullooCallId : null;
+
+    if (kullooCallId && /^[a-fA-F0-9]{24}$/.test(kullooCallId)) {
+      const existing = await this.callService.findCallDocumentByStableCallId(kullooCallId);
+      if (existing) {
+        const updated = await this.callService.updateCallDocument(existing._id.toString(), {
+          provider: "freeswitch",
+          providerCallId: input.callUuid,
+          direction: "outbound",
+          from: existing.from,
+          to: existing.to,
+          fromRaw: input.fromRaw ?? existing.fromRaw,
+          toRaw: input.toRaw ?? existing.toRaw,
+          fromE164: input.fromE164 ?? existing.fromE164,
+          toE164: input.toE164 ?? input.toE164,
+          callerName: input.callerName ?? existing.callerName,
+        });
+        call = updated ?? existing;
+      }
+    }
+
+    if (!call) {
+      const result = await this.callService.findOrCreateCallByProviderCallId("freeswitch", input.callUuid, {
+        direction: "inbound",
+        provider: "freeswitch",
+        from,
+        to,
+        fromRaw: input.fromRaw ?? undefined,
+        toRaw: input.toRaw ?? undefined,
+        fromE164: input.fromE164,
+        toE164: input.toE164,
+        callerName: input.callerName,
+        status: "received",
+        correlationId,
+        providerCallId: input.callUuid,
+        recordingEnabled: true,
+        timestamps: { receivedAt: now },
+      });
+      call = result.call;
+      created = result.created;
+    }
+
+    const callId = call._id.toString();
+    metrics.incActiveCalls();
+    const ctx = { correlationId: call.correlationId, callId, uuid: input.callUuid };
+
+    if (created) {
+      await this.callService.pushEvent(call, "received", {
+        from,
+        to,
+        fromRaw: input.fromRaw ?? undefined,
+        toRaw: input.toRaw ?? undefined,
+        fromE164: input.fromE164,
+        toE164: input.toE164,
+        callUuid: input.callUuid,
+      });
+    }
+
+    try {
+      const { recordingPath } = await runAiVoiceEslFlow({
+        conn,
+        callService: this.callService,
+        call,
+        ctx: { correlationId: call.correlationId, callId, channelUuid: input.callUuid },
+        recordingsBase: this.recordingsBase,
+      });
+      metrics.decActiveCalls();
+      return { callId, recordingPath };
+    } catch (error) {
+      metrics.decActiveCalls();
+      try {
+        await this.failAndHangup({
+          conn,
+          callId,
+          stage: "executeAiVoiceFlow",
+          error,
+        });
+      } catch (err) {
+        this.log(ctx, "error", "failAndHangup after ai_voice failed", err);
+      }
+      throw error;
+    }
   }
 
   /**

@@ -18,6 +18,7 @@ import { assertRedisAvailable, disconnectRedis } from "./services/redis/redis.cl
 import { createCallControlBackend } from "./services/call-control/call-control-backend.factory";
 import type { CallControlBackend } from "./services/call-control/call-control-backend.interface";
 import { AgentWsService } from "./services/agent/agent-ws.service";
+import { AiForkWsService } from "./services/ai/ai-fork-ws.service";
 
 function shutdownRedis(): void {
   void disconnectRedis().catch(() => undefined);
@@ -89,6 +90,8 @@ async function bootstrap(): Promise<void> {
 
   // Agent WebSocket server (/ws/agent) — attaches to httpServer before listen starts.
   const agentWs = new AgentWsService(httpServer);
+  const aiForkWs = new AiForkWsService();
+  aiForkWs.attach(httpServer);
 
   logger.info("bootstrap_starting_esl_server", { eslOutboundPort, agentMode: env.agentMode });
 
@@ -139,7 +142,10 @@ async function bootstrap(): Promise<void> {
   const shutdownCallControl = (): void => {
     void callControlBackend.stop().catch(() => undefined);
   };
-  const shutdownAgentWs = (): void => { agentWs.close(); };
+  const shutdownAgentWs = (): void => {
+    agentWs.close();
+    aiForkWs.close();
+  };
 
   process.once("SIGTERM", shutdownCallControl);
   process.once("SIGINT",  shutdownCallControl);

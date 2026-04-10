@@ -603,4 +603,19 @@ export class CallService {
   ): Promise<RecordingDocument> {
     return this.recordingRepository.create(payload);
   }
+
+  /** Persists one AI voice turn (full transcript — sliding window is LLM-only). */
+  async appendAiVoiceTurn(
+    callId: string,
+    turn: { role: "user" | "assistant"; text: string },
+  ): Promise<void> {
+    await this.callRepository.pushAiVoiceTurn(callId, {
+      ...turn,
+      ts: new Date(),
+    });
+  }
+
+  async setAiVoiceOperatorSummary(callId: string, summary: string): Promise<void> {
+    await this.callRepository.setAiVoiceOperatorSummary(callId, summary);
+  }
 }

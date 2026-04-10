@@ -56,6 +56,14 @@ export interface CallDocument {
     failedAt?: Date;
   };
   lastError?: string;
+  /**
+   * AI voice pipeline (AGENT_MODE=ai_voice): full transcript for compliance / post-call summary;
+   * live LLM uses a sliding window — see `operatorSummary` after hangup when enabled.
+   */
+  aiVoice?: {
+    turns: Array<{ role: "user" | "assistant"; text: string; ts: Date }>;
+    operatorSummary?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -89,6 +97,16 @@ const callSchema = new Schema<CallDocument>(
       failedAt: { type: Date },
     },
     lastError: { type: String },
+    aiVoice: {
+      turns: [
+        {
+          role: { type: String, enum: ["user", "assistant"], required: true },
+          text: { type: String, required: true },
+          ts: { type: Date, required: true },
+        },
+      ],
+      operatorSummary: { type: String },
+    },
   },
   { timestamps: true },
 );

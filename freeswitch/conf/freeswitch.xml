@@ -1,7 +1,7 @@
-<include>
-  <!--
+<?xml version="1.0"?>
+<!--
     freeswitch.xml — Main FreeSWITCH configuration for Kulloo
-    
+
     Multi-instance notes:
     - SIP port is 5070 (NOT 5060) — Kamailio owns 5060 and proxies INVITEs here
     - Each FreeSWITCH instance (fs1, fs2, ...) listens on the SAME container-internal port (5070)
@@ -9,12 +9,19 @@
     - Context is "mrf" — this is where hello.xml defines the hello-call extension
       (was "public" which caused the extension to never fire; fixed here)
     - RTP range and external IP come from vars.fsN.xml (per-instance override)
-    
+
     ESL (Event Socket) notes:
     - FreeSWITCH listens on 8021 (classic inbound ESL) — optional, kept for tooling
+    - listen-ip is 0.0.0.0 (IPv4 all interfaces) so mod_event_socket binds in Docker where
+      a vanilla "::" listen-ip can fail with "Cannot get information about IP address ::"
+      and fs_cli cannot connect.
     - The hello flow uses OUTBOUND socket: FS connects TO Kulloo API on ESL_OUTBOUND_PORT (3200)
       This is configured in dialplan/hello.xml via $${kulloo_esl_host}:$${kulloo_esl_port}
-  -->
+-->
+<document type="freeswitch/xml">
+  <X-PRE-PROCESS cmd="include" data="vars.xml"/>
+
+  <section name="configuration" description="Various Configuration">
 
   <configuration name="modules.conf" description="Modules">
     <modules>
@@ -77,7 +84,7 @@
     <profiles>
       <!--
         SIP profile "internal" — receives INVITEs forwarded by Kamailio.
-        
+
         Key settings:
         - sip-port: 5070 (NOT 5060; Kamailio owns 5060)
         - context: mrf (where hello.xml lives; was "public" which broke routing)
@@ -162,19 +169,20 @@
     </settings>
   </configuration>
 
-  <dialplan>
-    <include>
-      <!-- hello.xml defines the hello-call extension under context="mrf" -->
-      <X-PRE-PROCESS cmd="include" data="dialplan/hello.xml"/>
-    </include>
-  </dialplan>
+  </section>
+
+  <section name="dialplan" description="Regex/XML Dialplan">
+    <!-- hello.xml defines the hello-call extension under context="mrf" -->
+    <X-PRE-PROCESS cmd="include" data="dialplan/hello.xml"/>
+  </section>
 
   <!--
     User directory: agent SIP credentials for WebRTC softphone registration.
     Each file under directory/ defines one SIP user.
     The password MUST match AGENT_SIP_PASSWORD in backend/.env.
   -->
-  <directory>
+  <section name="directory" description="User Directory">
     <X-PRE-PROCESS cmd="include" data="directory/default/*.xml"/>
-  </directory>
-</include>
+  </section>
+
+</document>

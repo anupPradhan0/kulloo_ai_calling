@@ -20,6 +20,16 @@ function parseIntEnv(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function parseBoolEnv(name: string, fallback: boolean): boolean {
+  const raw = process.env[name]?.trim().toLowerCase();
+  if (raw === undefined || raw === "") {
+    return fallback;
+  }
+  if (["1", "true", "yes", "on"].includes(raw)) return true;
+  if (["0", "false", "no", "off"].includes(raw)) return false;
+  return fallback;
+}
+
 /** Parsed environment values used across HTTP, ESL, and background jobs. */
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -110,10 +120,36 @@ export const env = {
   // Default is "hello" which keeps the existing IVR beep/record/hangup script.
   // ---------------------------------------------------------------------------
   /**
-   * "hello"  → existing IVR script (default, no change).
-   * "webrtc" → bridge inbound call to agent's sip.js WebRTC endpoint.
+   * "hello"   → existing IVR script (default, no change).
+   * "webrtc"  → bridge inbound call to agent's sip.js WebRTC endpoint.
+   * "ai_voice"→ Deepgram → OpenAI → VEXYL-TTS loop over ESL (requires API keys).
    */
-  agentMode: (process.env.AGENT_MODE?.trim() || "hello") as "hello" | "webrtc",
+  agentMode: (process.env.AGENT_MODE?.trim() || "hello") as "hello" | "webrtc" | "ai_voice",
+  // --- AI voice pipeline (AGENT_MODE=ai_voice) — secrets only via env ---
+  deepgramApiKey: process.env.DEEPGRAM_API_KEY?.trim() || undefined,
+  openaiApiKey: process.env.OPENAI_API_KEY?.trim() || undefined,
+  /** Chat Completions model for the live loop (e.g. gpt-4o-mini). */
+  aiLlmModel: process.env.AI_LLM_MODEL?.trim() || "gpt-4o-mini",
+  /** Persona key for `getAiSystemPrompt` (files under prompts/ai-voice/). */
+  aiVoicePersona: process.env.AI_VOICE_PERSONA?.trim() || "default",
+  /** Max non-system chat messages in the sliding window (OpenAI). */
+  aiHistoryMaxTurns: parseIntEnv("AI_HISTORY_MAX_TURNS", 10),
+  /** After hangup, run async LLM summary for operators (non-blocking). */
+  aiSummaryOnHangup: parseBoolEnv("AI_SUMMARY_ON_HANGUP", true),
+  /** VEXYL-TTS WebSocket base: ws(s)://host:port (no path). Default assumes Docker service `vexyl-tts:8080`. */
+  vexylTtsWsUrl: process.env.VEXYL_TTS_WS_URL?.trim() || "ws://vexyl-tts:8080",
+  optionalVexylTtsApiKey: process.env.VEXYL_TTS_API_KEY?.trim() || undefined,
+  /** STT: treat telephony chunks as this sample rate (Deepgram pre-recorded). */
+  aiAudioForkSampleRate: parseIntEnv("AI_AUDIO_FORK_SAMPLE_RATE", 8000),
+  /** Playback / TTS alignment — WAV written for FS `playback` should match the SIP leg. */
+  aiPlaybackSampleRate: parseIntEnv("AI_PLAYBACK_SAMPLE_RATE", 8000),
+  /** VEXYL WebSocket synthesis: language/style (see VEXYL-TTS README). */
+  vexylTtsLang: process.env.VEXYL_TTS_LANG?.trim() || "en-IN",
+  vexylTtsStyle: process.env.VEXYL_TTS_STYLE?.trim() || "default",
+  /** User speech slice length (ms) when using record_session fallback (no audio fork). */
+  aiVoiceUserSliceMs: parseIntEnv("AI_VOICE_USER_SLICE_MS", 7000),
+  /** Safety cap on assistant rounds per call. */
+  aiVoiceMaxRounds: parseIntEnv("AI_VOICE_MAX_ROUNDS", 20),
   /**
    * FreeSWITCH WSS URL returned to the frontend so sip.js knows where to register.
    * Example: wss://yourdomain.com:7443

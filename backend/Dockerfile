@@ -27,6 +27,8 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/dist ./dist
+# AI voice system prompts (loaded at runtime — see prompt-loader.ts)
+COPY --from=builder /app/src/prompts ./prompts
 
 EXPOSE 5000
 

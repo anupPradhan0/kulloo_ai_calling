@@ -105,8 +105,9 @@ services:
     networks:
       - kulloo_net
 
+  # FreeSWITCH: public image (signalwire/freeswitch is not published on Docker Hub — see Docker/README.md)
   fs1:
-    image: signalwire/freeswitch:v1.10
+    image: safarov/freeswitch:latest
     container_name: kulloo-fs1
     hostname: fs1
     restart: unless-stopped
@@ -127,7 +128,7 @@ services:
       - api
 
   fs2:
-    image: signalwire/freeswitch:v1.10
+    image: safarov/freeswitch:latest
     container_name: kulloo-fs2
     hostname: fs2
     restart: unless-stopped
