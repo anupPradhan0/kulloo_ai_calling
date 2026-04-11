@@ -2,7 +2,7 @@
 
 > **Doc hub:** [Documentation index](README.md) — call flows and FreeSWITCH/ESL are sibling docs in this folder (e.g. [esl.md](esl.md), [freeswitch.md](freeswitch.md)).
 
-Base URL (production API): `http://app.anuppradhan.in` — web UI is served separately at `https://kulloocall.anuppradhan.in`.
+Base URL (production): `https://kulloocall.anuppradhan.in` (UI + API via nginx `/api`).
 
 All routes below are relative to the base URL.
 

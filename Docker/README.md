@@ -48,10 +48,10 @@ docker compose -f Docker/docker-compose.yml build web --no-cache
 docker compose -f Docker/docker-compose.yml up -d web
 ```
 
-**4. URLs** — frontend is **`https://kulloocall.anuppradhan.in`** (this nginx + cert). Backend / webhooks use **`http://app.anuppradhan.in`** (same machine: API port **5000** is published; point DNS **A** for `app` at the server or reverse-proxy `app` → `api:5000`). Set in repo-root `.env`:
+**4. URLs** — public hostname **`https://kulloocall.anuppradhan.in`**: nginx serves the UI and proxies **`/api`** and **`/ws`** to the API container. Set in repo-root `.env`:
 
-- `PUBLIC_BASE_URL=http://app.anuppradhan.in`
-- `PLIVO_ANSWER_URL` / `PLIVO_HANGUP_URL` / any webhook URLs must use **`http://app.anuppradhan.in/...`** (or `https://` if you terminate TLS for `app` separately).
+- `PUBLIC_BASE_URL=https://kulloocall.anuppradhan.in`
+- `PLIVO_ANSWER_URL` / `PLIVO_HANGUP_URL` / FreeSWITCH recording webhooks use **`https://kulloocall.anuppradhan.in/...`** paths that hit nginx → API.
 
 **5. Renewal** — `certbot renew` typically uses the same authenticator. For standalone, use a `--pre-hook` / `--post-hook` that stops/starts the `web` container, or switch to **webroot** + a location in nginx later.
 
