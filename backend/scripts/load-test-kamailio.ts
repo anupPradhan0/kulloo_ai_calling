@@ -242,7 +242,7 @@ async function main(): Promise<void> {
   if (successRate < 100) {
     console.log("⚠️  Some calls failed. Check the API logs for details:");
     console.log("   docker logs kulloo-api --tail=100");
-    console.log("   docker exec kulloo-kamailio kamctl dispatcher show");
+    console.log("   docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.list");
   } else {
     console.log("🏆 All calls accepted! Check Mongo for final status:");
     console.log("   docker exec kulloo-mongodb mongosh sip-backend --eval");

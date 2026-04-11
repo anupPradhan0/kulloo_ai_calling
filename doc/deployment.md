@@ -44,7 +44,7 @@ Verify:
 
 ```bash
 curl -sS http://127.0.0.1:5000/api/health
-docker exec kulloo-kamailio kamctl dispatcher show
+docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.list
 ```
 
 **Drachtio (Flow B)** — use the standalone Flow B compose file (see [`Docker/README.md`](../../Docker/README.md)); it is **not** a merge overlay in this repo:

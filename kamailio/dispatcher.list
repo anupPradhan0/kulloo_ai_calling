@@ -25,7 +25,7 @@
 ##   (flag=2 marks it inactive; Kamailio will not route to it)
 ##
 ## Apply changes at runtime (no restart needed):
-##   docker exec kamailio kamctl dispatcher reload
+##   docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.reload
 ##
 
 # Set 1: FreeSWITCH media server pool

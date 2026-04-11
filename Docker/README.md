@@ -83,7 +83,7 @@ Verify:
 ```bash
 curl -sS http://127.0.0.1:5000/api/health
 curl -sS http://127.0.0.1/api/health
-docker exec kulloo-kamailio kamctl dispatcher show
+docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.list
 curl -sS http://127.0.0.1:8088/health
 ```
 

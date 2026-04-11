@@ -70,7 +70,7 @@ This repo’s `kamailio/kamailio.cfg` loads a minimal proxy + dispatcher set:
 | `siputils` | `is_method()`, `has_totag()`, other SIP utility functions |
 | `xlog` | Extended structured logging for debugging |
 | `dispatcher` | **Core module**: load balancing, health checks (OPTIONS), failover |
-| `mi_fifo` | Management interface for `kamctl dispatcher show/reload` |
+| `ctl` | BinRPC socket for `kamcmd` (`dispatcher.list` / `dispatcher.reload`) |
 | `pv` | Pseudo-variables (`$ru`, `$du`, `$avp`, etc.) |
 
 
@@ -212,10 +212,10 @@ sequenceDiagram
 
 ```bash
 # Check live dispatcher state
-docker exec kulloo-kamailio kamctl dispatcher show
+docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.list
 
 # Force reload after editing dispatcher.list (no restart)
-docker exec kulloo-kamailio kamctl dispatcher reload
+docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.reload
 ```
 
 ---

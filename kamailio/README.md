@@ -49,14 +49,14 @@ docker compose -f docker-compose.kamailio.yml up -d
 
 ```bash
 # View dispatcher pool status (shows which FS instances are active/inactive)
-docker exec kamailio kamctl dispatcher show
+docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.list
 
 # Example output:
 # 1  sip:fs1:5070  Active   (0 failures)
 # 1  sip:fs2:5070  Active   (0 failures)
 
 # Reload dispatcher.list without restarting Kamailio
-docker exec kamailio kamctl dispatcher reload
+docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.reload
 
 # View Kamailio logs
 docker logs kamailio --tail=100 -f
@@ -90,7 +90,7 @@ sipsak -s sip:<KAMAILIO_PUBLIC_IP>:5060
 
 3. Reload dispatcher (no Kamailio restart needed):
    ```bash
-   docker exec kamailio kamctl dispatcher reload
+   docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher.reload
    ```
 
 ---
@@ -112,7 +112,7 @@ Kamailio performs **no header stripping**. The `record_route()` call adds Kamail
 
 | Symptom | Check |
 |---------|-------|
-| `503 Service Unavailable` | `kamctl dispatcher show` — are both FS instances active? |
+| `503 Service Unavailable` | `kamcmd … dispatcher.list` — are both FS instances active? |
 | Silent/one-way audio | `ext-rtp-ip` in `vars.fs1.xml`/`vars.fs2.xml` must be the **public IP** |
 | KullooCallId missing in ESL | Verify Kamailio logs show header in INVITE; check FS variable `sip_h_X-PH-KullooCallId` |
 | Calls stuck at `connected` | ESL not reaching API on port 3200 — check `kulloo_esl_host` in vars.xml |
