@@ -1,6 +1,6 @@
 # GitHub Actions — deploy to your VPS
 
-Pushing to **`main`** runs **CI** (backend + frontend `pnpm build`), then **CD** (SSH into the server, `git reset` to `origin/main`, `docker compose up -d --build`).
+Pushing to **`main`** runs **CI** (backend + frontend `pnpm build`), then **CD** (SSH into the server, `git reset` to `origin/main`, `docker compose build --parallel 1`, then `docker compose up -d`). Images build **one at a time** so small VPS hosts do not run out of RAM.
 
 ## 1. One-time: SSH key for GitHub only
 

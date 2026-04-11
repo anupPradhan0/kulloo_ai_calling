@@ -84,4 +84,6 @@ jobs:
             git fetch origin main
             git checkout main
             git reset --hard origin/main
-            docker compose -f Docker/docker-compose.yml up -d --build
+            # Sequential image builds avoid OOM ("signal: killed") on small VPS when api+web compile in parallel.
+            docker compose -f Docker/docker-compose.yml build --parallel 1
+            docker compose -f Docker/docker-compose.yml up -d
