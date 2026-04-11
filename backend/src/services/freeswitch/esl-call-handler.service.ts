@@ -423,6 +423,15 @@ export class EslCallHandlerService {
         });
 
         this.server.on("connection::open", (conn: Connection) => {
+          // modesl emits `error` on broken pipes (EPIPE) when FS closes the socket while Node is still
+          // writing — without a listener, EventEmitter treats this as fatal and crashes the process.
+          conn.on("error", (err: unknown) => {
+            logger.warn("esl_connection_io_error", {
+              component: "esl",
+              err: err instanceof Error ? serializeError(err) : err,
+            });
+          });
+
           // Log the remote address of the connecting FreeSWITCH instance.
           // In multi-instance deployments (fs1, fs2, ...) this tells us which FS handled the call.
           // modesl Connection wraps a net.Socket — access it via the internal socket property.
