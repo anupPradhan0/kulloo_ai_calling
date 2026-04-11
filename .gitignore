@@ -5,6 +5,9 @@ node_modules/
 # ─── Environment (keep secrets out of git) ────────────────────────────────────
 .env
 
+# VEXYL-TTS — clone locally or use Docker `--profile ai` (not vendored in this repo)
+vexyl-tts/
+
 # Call recordings (keep directory via recordings/.gitkeep)
 recordings/*
 !recordings/.gitkeep
