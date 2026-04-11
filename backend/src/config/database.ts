@@ -12,8 +12,8 @@ import { env } from "./env";
  * @returns Resolves when connected; never resolves on repeated failure except by throwing after the final attempt.
  */
 export async function connectDatabase(): Promise<void> {
-  const maxAttempts = 10;
-  const retryDelayMs = 1500;
+  const maxAttempts = 24;
+  const retryDelayMs = 2000;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {

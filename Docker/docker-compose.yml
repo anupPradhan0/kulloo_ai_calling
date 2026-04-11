@@ -84,11 +84,13 @@ services:
       # AGENT_SIP_PASSWORD: agent123
     volumes:
       - recordings_data:/recordings
+    # Wait for containers to start, not Docker "healthy" — Mongo healthcheck often flakes on small VPS
+    # (slow disk / mongosh timing) and blocks deploy. The API retries Mongo in connectDatabase().
     depends_on:
       mongodb:
-        condition: service_healthy
+        condition: service_started
       redis:
-        condition: service_healthy
+        condition: service_started
     networks:
       - kulloo_net
 

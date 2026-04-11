@@ -118,7 +118,7 @@ docker exec kulloo-kamailio kamcmd -s unix:/run/kamailio/kamailio_ctl dispatcher
 curl -sS http://127.0.0.1:8088/health
 ```
 
-If **`kulloo-mongodb is unhealthy`** blocks `api`: check **`docker logs kulloo-mongodb`**, **`df -h`** (disk full?), and **`docker inspect kulloo-mongodb --format '{{json .State.Health}}'`**. Slow or low-RAM hosts may need the Mongo healthcheck window in `docker-compose.yml` (already relaxed). Corrupt data volume: only after backup, **`docker compose … down`**, remove the **`mongodb_data`** Compose volume (see `docker volume ls`), **`up -d`** — **wipes the DB**.
+If **`kulloo-api` restarts in a loop** or Mongo errors: check **`docker logs kulloo-api`** and **`docker logs kulloo-mongodb`**, **`df -h`** (disk full?). Compose no longer blocks `api` on Mongo’s Docker healthcheck (API retries DB connect instead). If Mongo is truly broken, only after backup remove the **`mongodb_data`** volume (see `docker volume ls`) then **`up -d`** — **wipes the DB**.
 
 Stop (keeps volumes):
 
