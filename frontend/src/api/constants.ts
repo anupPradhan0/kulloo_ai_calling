@@ -11,3 +11,11 @@ const useRelativeApi =
 export const DEFAULT_API_BASE_URL = useRelativeApi
   ? ''
   : import.meta.env.VITE_API_BASE_URL?.trim() || ''
+
+/** Resolved origin used for `/api` and `/ws` (relative mode → current page origin). */
+export function getEffectiveApiBaseUrl(): string {
+  const base = DEFAULT_API_BASE_URL.trim()
+  if (base) return base.replace(/\/$/, '')
+  if (typeof window !== 'undefined') return window.location.origin
+  return ''
+}

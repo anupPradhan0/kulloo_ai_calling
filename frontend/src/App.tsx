@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import { getEffectiveApiBaseUrl } from './api/constants'
 import { ApiExplorer } from './components/ApiExplorer'
 import { AgentPage } from './pages/AgentPage'
 
@@ -13,6 +14,10 @@ export default function App() {
         <p className="subtitle">
           Public API tools and agent dialer: check status, place hello calls, and
           browse call history from the database.
+        </p>
+        <p className="api-base-hint">
+          <span className="api-base-hint__label">API base URL</span>
+          <code className="api-base-hint__url">{getEffectiveApiBaseUrl()}</code>
         </p>
         <nav className="app-nav" aria-label="Primary">
           <button

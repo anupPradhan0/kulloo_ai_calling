@@ -61,6 +61,32 @@
   line-height: 1.45;
 }
 
+.api-base-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.api-base-hint__label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.api-base-hint__url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  word-break: break-all;
+}
+
 .explorer {
   display: flex;
   flex-direction: column;
