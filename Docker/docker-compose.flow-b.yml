@@ -2,6 +2,9 @@
 # Run from repository root:
 #   docker compose -f Docker/docker-compose.flow-b.yml up -d --build
 #
+# Optional VEXYL-TTS: clone `vexyl-tts` at repo root, then:
+#   docker compose -f Docker/docker-compose.flow-b.yml --profile ai up -d --build
+#
 # SIP signaling: Drachtio on :5060. Node api attaches via command socket :9022.
 # RTP: Plivo ↔ FreeSWITCH directly (Drachtio does not carry audio).
 #
@@ -107,6 +110,8 @@ services:
       - kulloo_net
 
   vexyl-tts:
+    profiles:
+      - ai
     build:
       context: ../vexyl-tts
       dockerfile: Dockerfile

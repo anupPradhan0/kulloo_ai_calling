@@ -21,9 +21,8 @@ Both flows keep the rest identical:
 - **MongoDB** + **Redis** are unchanged
 - HTTP API stays on **5000**
 - **Web UI** (nginx) on **80** — proxies `/api` and `/ws` to the API (build with same-origin API; see `frontend/Dockerfile`)
-- **VEXYL-TTS** on the internal Docker network (`ws://vexyl-tts:8080`); health/debug on host **127.0.0.1:8088** (optional)
 
-The Compose files in this folder include **web** + **vexyl-tts** so one `docker compose up` brings up the full stack. The first image build for **vexyl-tts** downloads PyTorch and TTS weights (several GB) and can take a long time.
+**VEXYL-TTS** (for `AGENT_MODE=ai_voice`) is **optional**: it is not in the default `docker compose up` because it needs a separate `vexyl-tts/` tree at the repo root. Clone [VEXYL-TTS](https://github.com/vexyl-ai/vexyl-tts) into `vexyl-tts/`, then start with **`--profile ai`**. The first image build downloads PyTorch and TTS weights (several GB) and can take a long time.
 
 Detailed Flow B design: [`doc/drachtio.md`](../doc/drachtio.md)
 

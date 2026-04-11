@@ -1,10 +1,14 @@
-# Kulloo — full production stack (Flow A: Kamailio + FreeSWITCH + ESL + API + web UI + VEXYL-TTS)
+# Kulloo — full production stack (Flow A: Kamailio + FreeSWITCH + ESL + API + web UI)
 # Run from repository root:
 #   docker compose -f Docker/docker-compose.yml up -d --build
 #
-# Includes: MongoDB, Redis, backend API, nginx frontend (port 80), VEXYL-TTS (internal),
-# two FreeSWITCH instances, Kamailio on 5060.
-# First build of `vexyl-tts` is large (PyTorch + model); allow time and disk.
+# Includes: MongoDB, Redis, backend API, nginx frontend (port 80), two FreeSWITCH instances,
+# Kamailio on 5060.
+#
+# Optional VEXYL-TTS (AGENT_MODE=ai_voice): requires a `vexyl-tts/` directory at repo root.
+#   git clone https://github.com/vexyl-ai/vexyl-tts.git vexyl-tts
+#   docker compose -f Docker/docker-compose.yml --profile ai up -d --build
+# First `vexyl-tts` build is large (PyTorch + model); allow time and disk.
 #
 # Flow B (Drachtio instead of Kamailio): merge docker-compose.drachtio.yml — see that file.
 #
@@ -87,8 +91,11 @@ services:
     networks:
       - kulloo_net
 
-  # VEXYL-TTS — Python WebSocket TTS (AGENT_MODE=ai_voice). Heavy image; only api talks to it.
+  # VEXYL-TTS — Python WebSocket TTS (AGENT_MODE=ai_voice). Not part of default `up`;
+  # enable with `--profile ai` and clone ../vexyl-tts first (see header comment).
   vexyl-tts:
+    profiles:
+      - ai
     build:
       context: ../vexyl-tts
       dockerfile: Dockerfile
