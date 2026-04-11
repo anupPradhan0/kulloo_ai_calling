@@ -30,6 +30,7 @@ import {
   type Session,
   type SessionDescriptionHandler,
 } from 'sip.js'
+import { agentDebugLog } from '../agent/agentDebugLog'
 import { fetchAgentCredentials } from '../api/callsApi'
 import { normalizeBaseUrl } from '../api/callsApi'
 
@@ -97,6 +98,7 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
 
     async function init() {
       setSipStatus('connecting')
+      agentDebugLog('SIP init: fetching /api/agent/credentials …')
       try {
         // 1. Fetch SIP credentials from backend
         const creds = await fetchAgentCredentials(
@@ -104,8 +106,13 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           agentSessionId,
         )
 
+        agentDebugLog(
+          `SIP credentials OK — register as ${creds.username}@${creds.domain} via WSS ${creds.wssUrl}`,
+        )
+
         // 2. Request microphone (browser will prompt once)
         await navigator.mediaDevices.getUserMedia({ audio: true })
+        agentDebugLog('Microphone permission granted')
 
         if (cancelled) return
 
@@ -128,6 +135,9 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           delegate: {
             onInvite(invitation: Invitation) {
               if (cancelled) return
+              const fromUri =
+                invitation.remoteIdentity?.uri?.toString() ?? invitation.request?.from?.uri?.toString() ?? '?'
+              agentDebugLog(`SIP INVITE received (incoming leg) from ${fromUri}`)
               setPendingInvitation(invitation)
 
               // If caller hangs up before agent answers, clear the state
@@ -142,6 +152,7 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
         })
 
         uaRef.current = ua
+        agentDebugLog('SIP UserAgent.start() …')
         await ua.start()
 
         if (cancelled) { void ua.stop(); return }
@@ -151,17 +162,22 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
         registererRef.current = registerer
 
         registerer.stateChange.addListener((state) => {
+          agentDebugLog(`SIP Registerer state: ${String(state)}`)
           if (state === 'Registered')   setSipStatus('registered')
           if (state === 'Unregistered') setSipStatus('idle')
           if (state === 'Terminated')   setSipStatus('error')
         })
 
+        agentDebugLog('SIP register() — FreeSWITCH must see Registered for inbound bridge')
         await registerer.register()
       } catch (err: any) {
         if (!cancelled) {
           console.error('[SipContext] init failed:', err)
+          const msg = err instanceof Error ? err.message : String(err)
+          agentDebugLog(`SIP init FAILED: ${msg}`)
           if (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError') {
             setSipStatus('mic_denied')
+            agentDebugLog('Microphone blocked or no device — inbound calls cannot ring here')
           } else {
             setSipStatus('error')
           }

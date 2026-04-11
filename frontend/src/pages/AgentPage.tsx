@@ -6,7 +6,9 @@ import {
   heartbeatAgentSession,
   releaseAgentSession,
 } from '../api/callsApi'
+import { agentDebugLog } from '../agent/agentDebugLog'
 import { getOrCreateAgentSessionId } from '../agent/sessionId'
+import { AgentDebugPanel } from '../components/AgentDebugPanel'
 import { PhoneDialer } from '../components/PhoneDialer'
 import { CallHistoryPanel } from '../components/CallHistoryPanel'
 import { AgentWsProvider } from '../contexts/AgentWsContext'
@@ -65,6 +67,7 @@ function AgentPageContent({ baseUrl, onBaseUrlChange }: { baseUrl: string; onBas
           <CallHistoryPanel baseUrl={baseUrl} refreshToken={refreshToken} />
         </div>
       </div>
+      <AgentDebugPanel />
     </div>
   )
 }
@@ -78,10 +81,17 @@ export function AgentPage() {
 
   const tryClaim = useCallback(async () => {
     setClaim('loading')
+    agentDebugLog(`session/claim request (sessionId=${sessionId.slice(0, 8)}…)`)
     try {
       const { ok } = await claimAgentSession(baseUrl, sessionId)
+      if (ok) {
+        agentDebugLog('session/claim OK — single-agent lock acquired')
+      } else {
+        agentDebugLog('session/claim 409 — another tab holds the lock')
+      }
       setClaim(ok ? 'ready' : 'blocked')
-    } catch {
+    } catch (e) {
+      agentDebugLog(`session/claim error: ${e instanceof Error ? e.message : String(e)}`)
       setClaim('blocked')
     }
   }, [baseUrl, sessionId])
@@ -93,7 +103,8 @@ export function AgentPage() {
   useEffect(() => {
     if (claim !== 'ready') return
     const t = window.setInterval(() => {
-      void heartbeatAgentSession(baseUrl, sessionId).catch(() => {
+      void heartbeatAgentSession(baseUrl, sessionId).catch((e) => {
+        agentDebugLog(`session/heartbeat failed: ${e instanceof Error ? e.message : String(e)} — lock may be lost`)
         setClaim('blocked')
       })
     }, 25_000)

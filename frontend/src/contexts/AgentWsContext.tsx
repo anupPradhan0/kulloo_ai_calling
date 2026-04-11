@@ -19,6 +19,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
+import { agentDebugLog } from '../agent/agentDebugLog'
 import { normalizeBaseUrl } from '../api/callsApi'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -66,21 +67,42 @@ export function AgentWsProvider({ baseUrl, children }: Props) {
 
     // Convert HTTP base URL → WS URL (ws:// or wss://)
     const base = normalizeBaseUrl(baseUrl)
-    const wsUrl = base.replace(/^http/, 'ws') + '/ws/agent'
+    const wsUrl =
+      base === ''
+        ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/agent`
+        : base.replace(/^http/, 'ws') + '/ws/agent'
 
+    agentDebugLog(`WS connecting: ${wsUrl}`)
     setWsStatus('connecting')
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
+    /** Ignore events from a socket we no longer own (React Strict Mode remount, baseUrl change, etc.). */
+    const isCurrent = (): boolean => wsRef.current === ws
+
     ws.onopen = () => {
+      if (!isCurrent()) return
       retryRef.current = 0
       setWsStatus('connected')
+      agentDebugLog('WS open — /ws/agent connected (inbound_call.offered events will appear here)')
     }
 
     ws.onmessage = (evt) => {
+      if (!isCurrent()) return
+      const raw = typeof evt.data === 'string' ? evt.data : ''
+      if (raw === 'pong' || raw === 'ping') {
+        return
+      }
       let msg: unknown
-      try { msg = JSON.parse(evt.data as string) } catch { return }
+      try {
+        msg = JSON.parse(raw)
+      } catch {
+        agentDebugLog(`WS non-JSON message: ${raw.slice(0, 120)}`)
+        return
+      }
       const event = msg as Record<string, unknown>
+      const t = String(event.type ?? '?')
+      agentDebugLog(`WS event: ${t} ${raw.length > 280 ? `${raw.slice(0, 280)}…` : raw}`)
 
       if (event.type === 'inbound_call.offered') {
         setLiveCall({
@@ -94,8 +116,10 @@ export function AgentWsProvider({ baseUrl, children }: Props) {
       }
     }
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       if (unmountedRef.current) return
+      if (!isCurrent()) return
+      agentDebugLog(`WS closed code=${ev.code} reason=${ev.reason || '(none)'} clean=${ev.wasClean}`)
       setWsStatus('disconnected')
       wsRef.current = null
 
@@ -103,12 +127,16 @@ export function AgentWsProvider({ baseUrl, children }: Props) {
       const delay = Math.min(1000 * 2 ** retryRef.current, 16_000)
       if (retryRef.current < 5) {
         retryRef.current++
+        agentDebugLog(`WS reconnect in ${delay}ms (attempt ${retryRef.current}/5)`)
         setTimeout(connect, delay)
+      } else {
+        agentDebugLog('WS giving up after 5 reconnect attempts — refresh the page')
       }
     }
 
     ws.onerror = () => {
-      ws.close()
+      if (!isCurrent()) return
+      agentDebugLog('WS error event (see browser console for details)')
     }
   }, [baseUrl])
 
