@@ -25,12 +25,13 @@ services:
       MONGO_INITDB_DATABASE: sip-backend
     volumes:
       - mongodb_data:/data/db
+    # Lenient timings: small VPS / slow disk can exceed 30s before mongosh ping succeeds.
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      timeout: 10s
+      retries: 12
+      start_period: 120s
     networks:
       - kulloo_net
 
