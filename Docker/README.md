@@ -20,11 +20,42 @@ Both flows keep the rest identical:
 - **FreeSWITCH** handles media (RTP) and connects to Kulloo via **ESL outbound** on **3200**
 - **MongoDB** + **Redis** are unchanged
 - HTTP API stays on **5000**
-- **Web UI** (nginx) on **80** — proxies `/api` and `/ws` to the API (build with same-origin API; see `frontend/Dockerfile`)
+- **Web UI** (nginx) on **80** and **443** — proxies `/api` and `/ws` to the API; TLS uses host-mounted Let’s Encrypt certs (see **HTTPS** below)
 
 **VEXYL-TTS** (for `AGENT_MODE=ai_voice`) is **optional**: it is not in the default `docker compose up` because it needs a separate `vexyl-tts/` tree at the repo root. Clone [VEXYL-TTS](https://github.com/vexyl-ai/vexyl-tts) into `vexyl-tts/`, then start with **`--profile ai`**. The first image build downloads PyTorch and TTS weights (several GB) and can take a long time.
 
 Detailed Flow B design: [`doc/drachtio.md`](../doc/drachtio.md)
+
+---
+
+## HTTPS for the frontend (Let’s Encrypt)
+
+The `web` service expects certificates on the **host** at:
+
+`/etc/letsencrypt/live/<your-domain>/`
+
+Compose mounts that directory to `/etc/nginx/ssl` inside the container (see `frontend/nginx.conf`). Replace the domain in `docker-compose.yml` if yours differs from `kulloocall.anuppradhan.in`.
+
+**1. DNS** — `A` record for the hostname → your server’s public IP (propagate before continuing).
+
+**2. Firewall** — allow **80/tcp** and **443/tcp** (and your SIP/RTP ports as already documented).
+
+**3. Obtain a certificate** (HTTP-01 standalone — nothing may listen on **80** during validation):
+
+```bash
+cd /path/to/kulloo
+docker compose -f Docker/docker-compose.yml stop web
+sudo certbot certonly --standalone -d kulloocall.anuppradhan.in
+docker compose -f Docker/docker-compose.yml build web --no-cache
+docker compose -f Docker/docker-compose.yml up -d web
+```
+
+**4. App URLs** — set in repo-root `.env`:
+
+- `PUBLIC_BASE_URL=https://kulloocall.anuppradhan.in`
+- `PLIVO_ANSWER_URL` / `PLIVO_HANGUP_URL` / any webhook URLs must use **`https://kulloocall.anuppradhan.in/...`** as appropriate.
+
+**5. Renewal** — `certbot renew` typically uses the same authenticator. For standalone, use a `--pre-hook` / `--post-hook` that stops/starts the `web` container, or switch to **webroot** + a location in nginx later.
 
 ---
 
@@ -122,7 +153,8 @@ docker compose -f Docker/docker-compose.flow-b.yml down
 
 ## Ports / firewall checklist (production)
 
-- **80/tcp**: Web UI (nginx; same host also proxies `/api` and `/ws` to the API)
+- **80/tcp**: HTTP → redirects to HTTPS for the web UI
+- **443/tcp**: HTTPS web UI (nginx; proxies `/api` and `/ws` to the API)
 - **5000/tcp**: Kulloo HTTP API (direct access; Plivo webhooks often use `PUBLIC_BASE_URL` on 443/80 via your reverse proxy)
 - **3200/tcp**: ESL outbound (FreeSWITCH → Kulloo API)
 - **5060/udp + 5060/tcp**: SIP ingress (**Kamailio** for Flow A, **Drachtio** for Flow B)

@@ -114,6 +114,7 @@ services:
       - kulloo_net
 
   # React UI — nginx serves static files and proxies /api and /ws to the API container.
+  # TLS: obtain certs on the host first (see Docker/README.md), then mount live/ below.
   web:
     build:
       context: ../frontend
@@ -123,6 +124,10 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      # Let's Encrypt live dir (adjust domain if different)
+      - /etc/letsencrypt/live/kulloocall.anuppradhan.in:/etc/nginx/ssl:ro
     depends_on:
       - api
     networks:
