@@ -10,7 +10,9 @@ Kulloo currently supports **two call-control flows**. They differ only in the **
 
 A flow answers: **what receives the SIP INVITE** and **how the INVITE gets proxied to FreeSWITCH** (while preserving `KullooCallId` for outbound correlation).
 
-Kulloo always relies on **FreeSWITCH + outbound ESL** (`socket ... async full`) to execute the media hello flow and persist state.
+Kulloo always relies on **FreeSWITCH + outbound ESL** (`socket ... async full`) to execute the media script and persist state.
+
+**Media script selection (orthogonal to Flow A/B):** `AGENT_MODE` in `backend/src/config/env.ts` chooses **hello** (default IVR), **webrtc** (agent bridge), or **ai_voice** (Deepgram → OpenAI → VEXYL-TTS). See [ai-voice-agent.md](ai-voice-agent.md).
 
 ---
 

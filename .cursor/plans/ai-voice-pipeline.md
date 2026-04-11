@@ -1,7 +1,7 @@
 # AI voice pipeline implementation plan
 
 > **Stack:** **Deepgram** (STT) → **OpenAI Chat Completions** (cheap model) → **VEXYL-TTS** (TTS)  
-> **Target:** Kulloo (`backend/` TypeScript, FreeSWITCH + ESL). See [Documentation index](../README.md).  
+> **Target:** Kulloo (`backend/` TypeScript, FreeSWITCH + ESL). See [Documentation index](../../doc/README.md).  
 > **TTS integration:** Call the **[VEXYL-TTS](https://github.com/vexyl-ai/vexyl-tts)** server from **Kulloo only** (HTTP/WebSocket client in Node). Do **not** embed TTS logic in Python inside the Kulloo repo — run `vexyl-tts` as a **separate process** or container (see local clone: `/home/mors/Code/vexyl-tts`, `vexyl_tts_server.py`).
 
 ## Goals
@@ -51,7 +51,7 @@ flowchart LR
 
 **Summary**
 
-1. **SIP/RTP** unchanged: calls land on FreeSWITCH; Kulloo controls the leg via **outbound ESL** (`socket … async full`) — see [esl.md](../esl.md).
+1. **SIP/RTP** unchanged: calls land on FreeSWITCH; Kulloo controls the leg via **outbound ESL** (`socket … async full`) — see [esl.md](../../doc/esl.md).
 2. **STT path:** use an **audio fork** (below) for **live** audio into Deepgram when possible; otherwise chunked `record` as fallback.
 3. **LLM (OpenAI):** Chat Completions, cheap model — see provider table.
 4. **TTS (VEXYL-TTS):** HTTP/WebSocket from Kulloo; hand audio to FS as **`Buffer`** (**Voice handover** — locked, not one file per utterance under recordings).
@@ -66,7 +66,7 @@ flowchart LR
 
 | Step | Owner | Action |
 |------|--------|--------|
-| 1 | **FreeSWITCH** | Load/use the module your build provides for **forking or streaming media to WebSocket** (exact name varies: e.g. community recipes use `uuid_audio_fork`–style APIs or streaming modules — confirm against your FS version and [freeswitch.md](../freeswitch.md)). |
+| 1 | **FreeSWITCH** | Load/use the module your build provides for **forking or streaming media to WebSocket** (exact name varies: e.g. community recipes use `uuid_audio_fork`–style APIs or streaming modules — confirm against your FS version and [freeswitch.md](../../doc/freeswitch.md)). |
 | 2 | **Dialplan / ESL** | After `answer`, issue the fork **for this call UUID**, pointing at **`wss://` or `ws://<kulloo-host>:<port>/...`** (or internal Docker DNS). Include **mix** of both directions if you need “what the user hears” + “what the agent/IVR plays” for debugging; for **user speech only**, fork **inbound** leg per product choice. |
 | 3 | **Kulloo** | Implement a **WebSocket server** (or dedicated microservice) that: accepts the fork, **frames** match what Deepgram expects, forwards into **`SttAdapter` → Deepgram live**, correlates with **`callId`**. |
 | 4 | **Network** | Ensure FS containers can reach Kulloo’s WS port (same Docker network / firewall). |
@@ -95,7 +95,7 @@ fs_cli -x "show modules" | grep -i fork
 | **LLM** | **OpenAI Chat Completions** | Cheap model via `AI_LLM_MODEL` (e.g. `gpt-4o-mini`); `OPENAI_API_KEY` in env. |
 | **TTS** | **[VEXYL-TTS](https://github.com/vexyl-ai/vexyl-tts)** (Indic Parler–based, 22+ languages) | Run **`vexyl_tts_server.py`** (or Docker) separately. Kulloo uses **TypeScript** `fetch` / WebSocket client only. Optional `X-API-Key` if `VEXYL_TTS_API_KEY` is set on the server. For telephony, consider `VEXYL_TTS_SAMPLE_RATE=8000` on the TTS server side to align with narrowband if needed — see VEXYL-TTS README. |
 
-**Secrets:** centralize in `backend/src/config/env.ts` ([backend-folder-structure.md](../backend-folder-structure.md)): `DEEPGRAM_API_KEY`, `OPENAI_API_KEY`, `AI_LLM_MODEL`, and VEXYL base URL + optional API key — **never** in client or committed files.
+**Secrets:** centralize in `backend/src/config/env.ts` ([backend-folder-structure.md](../../doc/backend-folder-structure.md)): `DEEPGRAM_API_KEY`, `OPENAI_API_KEY`, `AI_LLM_MODEL`, and VEXYL base URL + optional API key — **never** in client or committed files.
 
 ## Audio “resolution” contract (sample rates must match)
 
@@ -108,7 +108,7 @@ fs_cli -x "show modules" | grep -i fork
 | Stage | Typical rate | Encoding / container | Who normalizes |
 |--------|----------------|-------------------------|----------------|
 | **Carrier / PSTN leg** | **8 kHz** narrowband | Often **G.711 μ-law** (PCMU) in RTP | Codec negotiated at SIP/RTP; FS decodes to linear for internal use. |
-| **FreeSWITCH internal / ESL** | Match negotiated leg or **8 kHz / 16 kHz** linear | PCM inside FS for processing | FS + dialplan; see [freeswitch.md](../freeswitch.md), `vars*.xml`. |
+| **FreeSWITCH internal / ESL** | Match negotiated leg or **8 kHz / 16 kHz** linear | PCM inside FS for processing | FS + dialplan; see [freeswitch.md](../../doc/freeswitch.md), `vars*.xml`. |
 | **Audio fork → Kulloo** | **Must be fixed in runbook** (e.g. **8 kHz** linear or μ-law frames) | Document **exact** fork API (frame size, endianness) | **Kulloo** converts to what **Deepgram** expects if different. |
 | **Deepgram STT** | **8 kHz** or **16 kHz** per project/API | Linear PCM or specified container | Set Deepgram **encoding + sample_rate** in API; no guessing. |
 | **VEXYL-TTS output** | **`VEXYL_TTS_SAMPLE_RATE`** — use **8000** for telephony alignment, or native **~44.1 kHz** then **resample** | WAV from API | **Either** configure VEXYL for **8 kHz** output **or** resample in Kulloo before `playback`. |
@@ -260,7 +260,7 @@ Kulloo is **not** Bolna or Jambonz, but the **same separation of concerns** appl
 ### Phase 2 — Audio path from FreeSWITCH to Kulloo (audio fork first)
 
 - **Primary:** Enable and invoke **FreeSWITCH audio fork / media tap** → **WebSocket URL on Kulloo** → frames forwarded to **Deepgram live** STT (see section *Real-time audio* above).
-- **Today’s hello flow** uses `record_session` + WAV files ([esl.md](../esl.md)) — keep that only as **fallback** or for compliance recording, not as the main AI ingress if you want low latency.
+- **Today’s hello flow** uses `record_session` + WAV files ([esl.md](../../doc/esl.md)) — keep that only as **fallback** or for compliance recording, not as the main AI ingress if you want low latency.
 - **Fallback for v1:** short **record chunks** or VAD-segmented files → Deepgram STT until the fork + WS ingest is stable.
 
 ### Phase 3 — Conversation loop (ESL)
@@ -285,7 +285,7 @@ Kulloo is **not** Bolna or Jambonz, but the **same separation of concerns** appl
 ### Phase 5 — Persistence and API
 
 - Mongo: `turns[]` or collection: `{ role, text, ts, sttLatencyMs?, llmLatencyMs?, ttsLatencyMs? }` — store **full** turns for compliance and for **post-call** summary (even though the **live** LLM uses a sliding window).
-- Optional: `GET /api/calls/:id/transcript` ([api.md](../api.md) style).
+- Optional: `GET /api/calls/:id/transcript` ([api.md](../../doc/api.md) style).
 - If **`AI_SUMMARY_ON_HANGUP`**: persist **`summary`** / **`operatorSummary`** on `Call` (or a side collection) from the **async** summarization job; expose on transcript/detail endpoints as needed.
 
 ## Risks and mitigations
@@ -310,10 +310,10 @@ Kulloo is **not** Bolna or Jambonz, but the **same separation of concerns** appl
 
 ## References
 
-- [esl.md](../esl.md) — outbound ESL, `executeCallFlow`
-- [freeswitch.md](../freeswitch.md) — `socket` dialplan
-- [hello-call-contract.md](../hello-call-contract.md) — hello baseline before AI
-- [backend-folder-structure.md](../backend-folder-structure.md) — where to add `ai` services
+- [esl.md](../../doc/esl.md) — outbound ESL, `executeCallFlow`
+- [freeswitch.md](../../doc/freeswitch.md) — `socket` dialplan
+- [hello-call-contract.md](../../doc/hello-call-contract.md) — hello baseline before AI
+- [backend-folder-structure.md](../../doc/backend-folder-structure.md) — where to add `ai` services
 - VEXYL-TTS repo (local): `/home/mors/Code/vexyl-tts` — `README.md`, `vexyl_tts_server.py`, REST + WebSocket APIs
 - **Bolna** (reference): `bolna/agent_manager/interruption_manager.py` — interruption / audio gate; `bolna/prompts.py` — centralized LLM prompt strings.
 - **Jambonz** (reference): `jambonz-feature-server/lib/tasks/say.js` — `uuid_break`; `lib/utils/tts-streaming-buffer.js` — TTS flush. App **webhook** returns the `llm` verb with **`llmOptions`** (e.g. OpenAI session/update) — personality lives in **your app**, not in the feature server core.

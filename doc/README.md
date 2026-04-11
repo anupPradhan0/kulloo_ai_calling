@@ -37,6 +37,7 @@ This `doc/` folder is intended to be **AI-friendly**: it should let an agent ans
 - **Redis is required (keys/TTLs + why):** [redis.md](redis.md).
 - **Call lifecycles + correlation:** [outbound-calls.md](outbound-calls.md), [inbound-call-dataflow.md](inbound-call-dataflow.md), [esl.md](esl.md).
 - **Which signaling edge is active (Flow A vs Flow B):** [flows.md](flows.md).
+- **AI voice agent (Deepgram â†’ OpenAI â†’ VEXYL-TTS, `AGENT_MODE=ai_voice`):** [ai-voice-agent.md](ai-voice-agent.md).
 - **Ops sanity checks (readiness, recovery loops):** [stability.md](stability.md), [deployment.md](deployment.md).
 
 ### Rules for agents (project conventions)
@@ -79,6 +80,7 @@ In the markdown files below this README, **relative links** are from each fileâ€
 | Document | Description |
 |----------|-------------|
 | [hello-call-contract.md](hello-call-contract.md) | Hello-call API, recording contract, acceptance-style notes. |
+| [ai-voice-agent.md](ai-voice-agent.md) | **AI voice agent** (`AGENT_MODE=ai_voice`): Deepgram, OpenAI, VEXYL-TTS, ESL loop, env vars, code map, persistence. |
 
 ## Backend codebase
 
@@ -106,6 +108,12 @@ In the markdown files below this README, **relative links** are from each fileâ€
 | [freeswitch.md](freeswitch.md) | FreeSWITCH config layout, multi-instance (fs1/fs2), SIP port 5070, Docker notes. |
 | [webrtc-agent-softphone.md](webrtc-agent-softphone.md) | **WebRTC Softphone**: Agent connectivity (sip.js WSS listener, `/ws/agent`, and API bridging). |
 | [drachtio.md](drachtio.md) | Flow B: Drachtio SIP edge (replaces Kamailio). |
+
+## Planning (roadmaps)
+
+| Location | Description |
+|----------|-------------|
+| [`.cursor/plans/`](../.cursor/plans/README.md) | Long-form design docs (e.g. AI voice pipeline roadmap). **Implementation** status: [ai-voice-agent.md](ai-voice-agent.md). |
 
 ## Reference
 

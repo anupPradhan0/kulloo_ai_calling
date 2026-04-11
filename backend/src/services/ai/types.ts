@@ -1,5 +1,5 @@
 /**
- * AI voice pipeline contracts — STT / LLM / TTS adapters (see doc/plan/ai-voice-pipeline.md).
+ * AI voice pipeline contracts — STT / LLM / TTS adapters (see doc/ai-voice-agent.md, roadmap .cursor/plans/ai-voice-pipeline.md).
  */
 
 export type SttEventKind = "final" | "interim";
