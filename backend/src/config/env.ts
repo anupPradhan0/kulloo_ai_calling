@@ -172,6 +172,11 @@ export const env = {
    * STUN server returned to sip.js for WebRTC ICE negotiation.
    */
   stunServerUrl: process.env.STUN_SERVER_URL?.trim() || "stun:stun.l.google.com:19302",
+  /**
+   * When true, only one browser session (X-Agent-Session-Id) may fetch /api/agent/credentials at a time (Redis).
+   * Prevents two operators registering the same SIP agent extension. Default true in production-minded setups.
+   */
+  agentSingleLockEnabled: parseBoolEnv("AGENT_SINGLE_LOCK_ENABLED", true),
 
   // ---------------------------------------------------------------------------
   // Recording storage (local + optional S3 offload)

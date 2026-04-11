@@ -81,9 +81,9 @@ function attachRemoteAudio(session: Session): void {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-type Props = { baseUrl: string; children: ReactNode }
+type Props = { baseUrl: string; agentSessionId?: string; children: ReactNode }
 
-export function SipProvider({ baseUrl, children }: Props) {
+export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
   const [sipStatus, setSipStatus]             = useState<SipStatus>('idle')
   const [activeSession, setActiveSession]     = useState<Session | null>(null)
   const [pendingInvitation, setPendingInvitation] = useState<Invitation | null>(null)
@@ -99,7 +99,10 @@ export function SipProvider({ baseUrl, children }: Props) {
       setSipStatus('connecting')
       try {
         // 1. Fetch SIP credentials from backend
-        const creds = await fetchAgentCredentials(normalizeBaseUrl(baseUrl))
+        const creds = await fetchAgentCredentials(
+          normalizeBaseUrl(baseUrl),
+          agentSessionId,
+        )
 
         // 2. Request microphone (browser will prompt once)
         await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -175,7 +178,7 @@ export function SipProvider({ baseUrl, children }: Props) {
       uaRef.current = null
       registererRef.current = null
     }
-  }, [baseUrl])
+  }, [baseUrl, agentSessionId])
 
   // ── acceptCall ────────────────────────────────────────────────────────────
   const acceptCall = useCallback(async () => {
@@ -232,7 +235,7 @@ export function SipProvider({ baseUrl, children }: Props) {
     if (!ua) return
 
     // We need credentials to know the FS domain
-    fetchAgentCredentials(normalizeBaseUrl(baseUrl)).then((creds) => {
+    fetchAgentCredentials(normalizeBaseUrl(baseUrl), agentSessionId).then((creds) => {
       const target = UserAgent.makeURI(`sip:${number}@${creds.domain}`)
       if (!target) return
 
@@ -246,7 +249,7 @@ export function SipProvider({ baseUrl, children }: Props) {
 
       void inviter.invite()
     }).catch(() => {})
-  }, [baseUrl])
+  }, [baseUrl, agentSessionId])
 
   return (
     <SipContext.Provider value={{

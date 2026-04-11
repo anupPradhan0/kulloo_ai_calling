@@ -3,38 +3,125 @@
  *
  * GET  /api/agent/credentials  — returns FreeSWITCH WSS URL + SIP credentials for sip.js.
  * POST /api/agent/status       — agent sets their availability (available / offline).
- *
- * These routes are intentionally thin: credentials come from env (not DB) in v1;
- * status is logged and acknowledged but not persisted yet.
+ * POST /api/agent/session/claim     — acquire single-agent lock (Redis) when AGENT_SINGLE_LOCK_ENABLED.
+ * POST /api/agent/session/heartbeat — refresh lock TTL.
+ * POST /api/agent/session/release   — release lock (tab close / logout).
  */
 
-/** Layer: routing only — thin handlers, no business logic. */
+/** Layer: routing only — thin handlers. */
 import { Router, Request, Response } from "express";
 import { env } from "../../../config/env";
 import { logger } from "../../../utils/logger";
+import {
+  claimAgentLock,
+  refreshAgentLock,
+  releaseAgentLock,
+  verifyAgentLock,
+} from "../services/agent-lock.service";
 
 export const agentRouter = Router();
 
+function sessionIdFrom(req: Request): string | undefined {
+  const raw = req.headers["x-agent-session-id"];
+  if (typeof raw === "string" && raw.trim().length >= 8) {
+    return raw.trim();
+  }
+  return undefined;
+}
+
 /**
  * Returns the FreeSWITCH WSS connection details and SIP credentials.
- * The frontend sip.js uses these to register as a SIP endpoint over WebSocket.
+ * When AGENT_SINGLE_LOCK_ENABLED, requires X-Agent-Session-Id matching an active claim.
  */
-agentRouter.get("/credentials", (_req: Request, res: Response) => {
+agentRouter.get("/credentials", async (req: Request, res: Response) => {
+  if (env.agentSingleLockEnabled) {
+    const sid = sessionIdFrom(req);
+    if (!sid) {
+      res.status(400).json({
+        success: false,
+        message: "Missing X-Agent-Session-Id (claim /api/agent/session/claim first).",
+      });
+      return;
+    }
+    const ok = await verifyAgentLock(sid);
+    if (!ok) {
+      res.status(423).json({
+        success: false,
+        code: "AGENT_LOCK_LOST",
+        message: "Agent session lock expired or was taken by another browser.",
+      });
+      return;
+    }
+  }
+
   res.json({
     success: true,
     data: {
-      /** WSS URL for sip.js UserAgent transportOptions.server */
       wssUrl: env.freeswitchWssUrl,
-      /** SIP domain — used in sip URI: sip:<username>@<domain> */
       domain: env.freeswitchDomain,
-      /** SIP username the agent registers with */
       username: env.agentSipUsername,
-      /** SIP password */
       password: env.agentSipPassword,
-      /** STUN server for WebRTC ICE negotiation */
       stunServer: env.stunServerUrl,
     },
   });
+});
+
+agentRouter.post("/session/claim", async (req: Request, res: Response) => {
+  if (!env.agentSingleLockEnabled) {
+    res.json({ success: true, locked: false });
+    return;
+  }
+
+  const { sessionId } = req.body as { sessionId?: string };
+  if (typeof sessionId !== "string" || sessionId.trim().length < 8) {
+    res.status(400).json({ success: false, message: "sessionId must be a string (min 8 chars)." });
+    return;
+  }
+
+  const result = await claimAgentLock(sessionId.trim());
+  if (result === "held_by_other") {
+    res.status(409).json({
+      success: false,
+      code: "AGENT_IN_USE",
+      message: "Another browser already has the agent workstation session.",
+    });
+    return;
+  }
+
+  res.json({ success: true, locked: true });
+});
+
+agentRouter.post("/session/heartbeat", async (req: Request, res: Response) => {
+  if (!env.agentSingleLockEnabled) {
+    res.json({ success: true });
+    return;
+  }
+  const sid = sessionIdFrom(req);
+  if (!sid) {
+    res.status(400).json({ success: false, message: "Missing X-Agent-Session-Id" });
+    return;
+  }
+  const ok = await verifyAgentLock(sid);
+  if (!ok) {
+    res.status(423).json({ success: false, code: "AGENT_LOCK_LOST", message: "Lock no longer valid." });
+    return;
+  }
+  await refreshAgentLock(sid);
+  res.json({ success: true });
+});
+
+agentRouter.post("/session/release", async (req: Request, res: Response) => {
+  if (!env.agentSingleLockEnabled) {
+    res.json({ success: true });
+    return;
+  }
+  const sid = sessionIdFrom(req);
+  if (!sid) {
+    res.status(400).json({ success: false, message: "Missing X-Agent-Session-Id" });
+    return;
+  }
+  await releaseAgentLock(sid);
+  res.json({ success: true });
 });
 
 /**

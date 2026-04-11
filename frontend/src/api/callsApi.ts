@@ -96,13 +96,64 @@ export type AgentCredentials = {
   stunServer: string
 }
 
-export async function fetchAgentCredentials(baseUrl: string): Promise<AgentCredentials> {
+export async function fetchAgentCredentials(
+  baseUrl: string,
+  agentSessionId?: string,
+): Promise<AgentCredentials> {
   const url = `${normalizeBaseUrl(baseUrl)}/api/agent/credentials`
-  const res = await fetch(url)
+  const headers: HeadersInit = {}
+  if (agentSessionId) {
+    headers['X-Agent-Session-Id'] = agentSessionId
+  }
+  const res = await fetch(url, { headers })
   const text = await res.text()
   if (!res.ok) throw new Error(text || `${res.status} ${res.statusText}`)
   const json = JSON.parse(text) as { success: boolean; data: AgentCredentials }
   return json.data
+}
+
+export async function claimAgentSession(
+  baseUrl: string,
+  sessionId: string,
+): Promise<{ ok: boolean }> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/session/claim`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  })
+  if (res.status === 409) {
+    return { ok: false }
+  }
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || `${res.status} ${res.statusText}`)
+  }
+  return { ok: true }
+}
+
+export async function heartbeatAgentSession(
+  baseUrl: string,
+  sessionId: string,
+): Promise<void> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/session/heartbeat`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-Agent-Session-Id': sessionId },
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || `${res.status} ${res.statusText}`)
+  }
+}
+
+export async function releaseAgentSession(baseUrl: string, sessionId: string): Promise<void> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/session/release`
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'X-Agent-Session-Id': sessionId },
+    keepalive: true,
+  })
 }
 
 export async function setAgentStatus(

@@ -101,3 +101,52 @@
     width: 100%;
   }
 }
+
+.agent-plivo-note {
+  margin: 0.85rem 0 0;
+  padding: 0.65rem 0.75rem;
+  max-width: 44rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.agent-plivo-note__code {
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+.agent-page--gate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 2rem 1.25rem;
+  max-width: 36rem;
+  margin: 0 auto;
+}
+
+.agent-gate-msg {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.agent-gate-retry {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  cursor: pointer;
+}
+
+.agent-gate-retry:hover {
+  filter: brightness(1.05);
+}
