@@ -89,6 +89,14 @@
   font-weight: 400;
 }
 
+.incoming-modal__hint {
+  margin: -0.5rem 0 1.25rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+  max-width: 20rem;
+}
+
 .incoming-modal__actions {
   display: flex;
   gap: 1rem;
@@ -107,7 +115,13 @@
   transition: transform 0.1s, filter 0.2s;
 }
 
-.incoming-modal__btn:active {
+.incoming-modal__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.incoming-modal__btn:active:not(:disabled) {
   transform: scale(0.96);
 }
 
