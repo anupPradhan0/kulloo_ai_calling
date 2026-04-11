@@ -29,7 +29,7 @@ Use a **dedicated** user if you prefer; the user must run `docker` and `git` in 
 
 | Name | Example |
 |------|---------|
-| `DEPLOY_HOST` | `187.127.150.91` or your server hostname |
+| `DEPLOY_HOST` | `187.127.150.91`, or any hostname whose **A** record points at the same VPS (e.g. `kulloocall.anuppradhan.in` or `app.anuppradhan.in`) — SSH accepts either |
 | `DEPLOY_USER` | `root` or `deploy` |
 | `DEPLOY_SSH_KEY` | Contents of **private** key file (multiline) |
 | `DEPLOY_PATH` | `/root/kulloo_ai_calling` (must match **absolute** path to the clone on the server) |

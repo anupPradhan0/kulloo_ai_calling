@@ -5,8 +5,8 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-# Production UI calls this origin for /api and /ws (see nginx reverse proxy)
-ARG VITE_API_BASE_URL=https://kulloocall.anuppradhan.in
+# Production: UI on kulloocall HTTPS; API on app (see frontend/.env.example)
+ARG VITE_API_BASE_URL=http://app.anuppradhan.in
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN pnpm run build
 

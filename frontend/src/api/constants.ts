@@ -11,4 +11,4 @@ const useRelativeApi =
 export const DEFAULT_API_BASE_URL = useRelativeApi
   ? ''
   : import.meta.env.VITE_API_BASE_URL?.trim() ||
-    'https://kulloocall.anuppradhan.in'
+    'http://app.anuppradhan.in'
