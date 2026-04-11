@@ -17,46 +17,35 @@ sudo certbot certonly --standalone -d yourdomain.com
 
 ---
 
-## Step 2 — Create the TLS directory (if it doesn't exist)
+## Step 2 — TLS directory (checked in under `conf`)
+
+Certs live next to the rest of the config so Docker can use **one** read-only bind mount (`freeswitch/conf` → `/etc/freeswitch`). A separate `freeswitch/tls` bind is **not** used (nested mounts on a read-only parent fail on some engines).
 
 ```bash
-mkdir -p /path/to/kulloo/freeswitch/tls
+mkdir -p /path/to/kulloo/freeswitch/conf/tls
 ```
 
 ---
 
-## Step 3 — Copy the Certs Into the FreeSWITCH TLS Volume
+## Step 3 — Copy the Certs Into `freeswitch/conf/tls`
 
 ```bash
 # Replace yourdomain.com with your actual domain
-sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem ./freeswitch/tls/wss.pem
-sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem   ./freeswitch/tls/wss.key
+sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem ./freeswitch/conf/tls/wss.pem
+sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem   ./freeswitch/conf/tls/wss.key
 
 # Make them readable by the FreeSWITCH container process
-sudo chmod 644 ./freeswitch/tls/wss.pem
-sudo chmod 640 ./freeswitch/tls/wss.key
+sudo chmod 644 ./freeswitch/conf/tls/wss.pem
+sudo chmod 640 ./freeswitch/conf/tls/wss.key
 ```
 
-> FreeSWITCH looks for `wss.pem` and `wss.key` in the `tls-cert-dir` configured in the `webrtc` SIP profile.
+> FreeSWITCH looks for `wss.pem` and `wss.key` in the `tls-cert-dir` configured in the `webrtc` SIP profile (`/etc/freeswitch/tls` inside the container).
 
 ---
 
-## Step 4 — Mount the TLS Directory in Docker Compose
+## Step 4 — Docker Compose
 
-In `Docker/docker-compose.yml`, add the volume mount to the `freeswitch` service:
-
-```yaml
-freeswitch:
-  ports:
-    - "5070:5070/udp"
-    - "7443:7443"          # WSS (browser sip.js)
-    - "5066:5066"          # Plain WS (optional fallback)
-    - "16384-17383:16384-17383/udp"  # RTP range
-  volumes:
-    - ./freeswitch/conf:/etc/freeswitch:ro
-    - ./freeswitch/tls:/etc/freeswitch/tls:ro    # <-- add this line
-    - recordings:/recordings
-```
+`Docker/docker-compose.yml` already mounts `./freeswitch/conf` at `/etc/freeswitch`. No extra TLS volume line is required.
 
 ---
 
@@ -96,7 +85,7 @@ Add a cron job or a certbot deploy hook:
 ```bash
 # /etc/letsencrypt/renewal-hooks/deploy/freeswitch.sh
 #!/bin/bash
-cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem /path/to/kulloo/freeswitch/tls/wss.pem
-cp /etc/letsencrypt/live/yourdomain.com/privkey.pem   /path/to/kulloo/freeswitch/tls/wss.key
-cd /path/to/kulloo && docker compose restart freeswitch
+cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem /path/to/kulloo/freeswitch/conf/tls/wss.pem
+cp /etc/letsencrypt/live/yourdomain.com/privkey.pem   /path/to/kulloo/freeswitch/conf/tls/wss.key
+cd /path/to/kulloo && docker compose -f Docker/docker-compose.yml restart kulloo-fs1
 ```

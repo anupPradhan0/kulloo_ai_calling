@@ -143,11 +143,10 @@ services:
       - "7443:7443/tcp"    # WSS — browser sip.js registers here
       - "5066:5066/tcp"    # plain WS (optional fallback)
     volumes:
+      # Single conf mount includes conf/tls/ for WSS certs (nested tls bind breaks on ro parent)
       - ../freeswitch/conf:/etc/freeswitch:ro
       - ../freeswitch/conf/vars.fs1.xml:/etc/freeswitch/vars.xml:ro
       - recordings_data:/recordings
-      # TLS certs for WSS — mount certbot certs here (see freeswitch/README-tls.md)
-      - ../freeswitch/tls:/etc/freeswitch/tls:ro
     environment:
       FS_INSTANCE: fs1
     networks:
