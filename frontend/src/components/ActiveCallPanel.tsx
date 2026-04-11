@@ -47,7 +47,8 @@ export function ActiveCallPanel() {
 
   // If there's an active outbound call, liveCall might be null initially (until backend WS sync),
   // so we fallback to the destination URI.
-  const callerNumber = liveCall?.from ?? activeSession?.remoteIdentity.uri.user ?? 'Unknown'
+  const callerNumber =
+    liveCall?.from ?? activeSession?.remoteIdentity?.uri?.user ?? 'Unknown'
 
   return (
     <div className="active-call">

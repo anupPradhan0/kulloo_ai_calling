@@ -23,6 +23,11 @@ export function getAgentDebugLines(): string[] {
   return [...lines]
 }
 
+/** Stable text snapshot for `useSyncExternalStore` (must not return a new reference when content is unchanged). */
+export function getAgentDebugText(): string {
+  return lines.join('\n')
+}
+
 export function subscribeAgentDebugLog(onStoreChange: () => void): () => void {
   listeners.add(onStoreChange)
   return () => listeners.delete(onStoreChange)

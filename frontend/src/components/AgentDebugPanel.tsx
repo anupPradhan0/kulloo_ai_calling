@@ -4,14 +4,15 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import {
   clearAgentDebugLog,
-  getAgentDebugLines,
+  getAgentDebugText,
   subscribeAgentDebugLog,
 } from '../agent/agentDebugLog'
 import './AgentDebugPanel.css'
 
 export function AgentDebugPanel() {
-  const text = useSyncExternalStore(subscribeAgentDebugLog, getAgentDebugLines, getAgentDebugLines)
-  const joined = text.join('\n')
+  // Snapshot must be value-stable when the log is unchanged (arrays fail Object.is every call).
+  const joined = useSyncExternalStore(subscribeAgentDebugLog, getAgentDebugText, getAgentDebugText)
+  const lineCount = joined === '' ? 0 : joined.split('\n').length
 
   const copy = useCallback(() => {
     void navigator.clipboard.writeText(joined).catch(() => undefined)
@@ -20,7 +21,7 @@ export function AgentDebugPanel() {
   return (
     <details className="agent-debug">
       <summary className="agent-debug__summary">
-        Session debug log ({text.length} lines) — WebSocket + SIP + lock
+        Session debug log ({lineCount} lines) — WebSocket + SIP + lock
       </summary>
       <div className="agent-debug__toolbar">
         <button type="button" className="agent-debug__btn" onClick={copy}>
