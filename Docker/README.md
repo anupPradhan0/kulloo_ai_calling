@@ -5,6 +5,8 @@ This folder contains **production-oriented** Docker Compose files. It is written
 > [!IMPORTANT]
 > Run Compose from the **repository root** so `../` paths in these files resolve correctly.
 
+**Auto-deploy from GitHub:** see [`.github/DEPLOY.md`](../.github/DEPLOY.md) (CI builds on every PR/push; CD SSH + `docker compose` on push to `main`).
+
 ---
 
 ## Choose a flow (pick exactly one)
