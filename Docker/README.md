@@ -53,6 +53,8 @@ docker compose -f Docker/docker-compose.yml up -d web
 
 **5. Renewal** — `certbot renew` typically uses the same authenticator. For standalone, use a `--pre-hook` / `--post-hook` that stops/starts the `web` container, or switch to **webroot** + a location in nginx later.
 
+**WebSockets (Agent page `/ws/agent`):** the bundled `nginx.conf` does **not** enable HTTP/2 on port 443. Browsers use HTTP/1.1 for `wss` upgrades; `http2` on the same listener often yields `101` then **Invalid frame header** behind nginx.
+
 ---
 
 ## One-time server setup
