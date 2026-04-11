@@ -1,11 +1,15 @@
 # CI: build backend + frontend on every push/PR to main.
-# CD: on push to main — build Docker images on GitHub (enough RAM), SCP tarball to VPS, load + up (no compile on server).
+# CD: on push to main — build Docker images on GitHub, push to GHCR, VPS pulls + compose up (no heavy SCP over SSH).
 #
 # Required repo secrets (Settings → Secrets and variables → Actions):
 #   DEPLOY_HOST       — e.g. 187.127.150.91 or srv1578119.example.com
 #   DEPLOY_USER       — SSH user (e.g. root or deploy)
 #   DEPLOY_SSH_KEY    — private key (full PEM, including BEGIN/END lines)
 #   DEPLOY_PATH       — absolute path to the repo on the server, e.g. /root/kulloo_ai_calling
+#
+# GHCR: images are pushed as ghcr.io/<owner>/kulloo-backend:main and kulloo-frontend:main.
+# Set each package to "public" under GitHub Packages so the VPS can docker pull without login,
+# OR add a read-only PAT and docker login on the server (see .github/DEPLOY.md).
 #
 # See .github/DEPLOY.md for SSH key setup.
 
@@ -21,6 +25,10 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   backend-build:
@@ -75,34 +83,35 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       # Build on GitHub runners — avoids OOM ("signal: killed") on small VPS during tsc/vite.
       - name: Build api + web images
         run: |
           set -euo pipefail
           docker compose -f Docker/docker-compose.yml build api web
 
-      - name: Save images to tarball
+      - name: Tag and push images to GHCR
         run: |
           set -euo pipefail
-          docker save kulloo-backend:local kulloo-frontend:local | gzip -1 > kulloo-images.tar.gz
-          ls -lh kulloo-images.tar.gz
+          OWNER_LC=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          docker tag kulloo-backend:local "ghcr.io/${OWNER_LC}/kulloo-backend:main"
+          docker tag kulloo-frontend:local "ghcr.io/${OWNER_LC}/kulloo-frontend:main"
+          docker push "ghcr.io/${OWNER_LC}/kulloo-backend:main"
+          docker push "ghcr.io/${OWNER_LC}/kulloo-frontend:main"
 
-      - name: Copy image bundle to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: kulloo-images.tar.gz
-          target: ${{ secrets.DEPLOY_PATH }}/
-          command_timeout: 30m
-
-      - name: SSH — git sync, load images, restart stack
+      - name: SSH — git sync, pull images from GHCR, restart stack
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
           command_timeout: 45m
           script_stop: true
           script: |
@@ -111,6 +120,9 @@ jobs:
             git fetch origin main
             git checkout main
             git reset --hard origin/main
-            gunzip -c kulloo-images.tar.gz | docker load
-            rm -f kulloo-images.tar.gz
+            OWNER_LC=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+            docker pull "ghcr.io/${OWNER_LC}/kulloo-backend:main"
+            docker tag "ghcr.io/${OWNER_LC}/kulloo-backend:main" kulloo-backend:local
+            docker pull "ghcr.io/${OWNER_LC}/kulloo-frontend:main"
+            docker tag "ghcr.io/${OWNER_LC}/kulloo-frontend:main" kulloo-frontend:local
             docker compose -f Docker/docker-compose.yml up -d
