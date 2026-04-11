@@ -5,8 +5,9 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-ARG VITE_USE_RELATIVE_API=true
-ENV VITE_USE_RELATIVE_API=${VITE_USE_RELATIVE_API}
+# Production UI calls this origin for /api and /ws (see nginx reverse proxy)
+ARG VITE_API_BASE_URL=https://kulloocall.anuppradhan.in
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN pnpm run build
 
 FROM nginx:1.27-alpine
