@@ -13,11 +13,11 @@
     Both fs1 and fs2 run on the same server → same public IP, different RTP ranges.
     FreeSWITCH includes this IP in SDP so Plivo knows where to send audio.
     
-    Replace 148.135.138.190 with your actual server public IP.
+    Replace 187.127.150.91 if this host moves.
   -->
 
   <!-- Public IPv4 of the server (same as fs1 — both run on the same host) -->
-  <X-PRE-PROCESS cmd="set" data="external_sip_ip=148.135.138.190"/>
+  <X-PRE-PROCESS cmd="set" data="external_sip_ip=187.127.150.91"/>
   <X-PRE-PROCESS cmd="set" data="domain=$${external_sip_ip}"/>
 
   <!--
@@ -30,7 +30,7 @@
   <X-PRE-PROCESS cmd="set" data="kulloo_esl_port=3200"/>
 
   <!-- Recording webhook (optional) -->
-  <X-PRE-PROCESS cmd="set" data="kulloo_recording_webhook_url=https://kulloocall.anuppradhan.in/api/calls/callbacks/freeswitch/recording"/>
+  <X-PRE-PROCESS cmd="set" data="kulloo_recording_webhook_url=http://187.127.150.91:5000/api/calls/callbacks/freeswitch/recording"/>
 
   <!-- Codecs -->
   <X-PRE-PROCESS cmd="set" data="global_codec_prefs=OPUS,PCMU,PCMA"/>

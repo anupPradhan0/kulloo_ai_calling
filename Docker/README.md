@@ -20,6 +20,10 @@ Both flows keep the rest identical:
 - **FreeSWITCH** handles media (RTP) and connects to Kulloo via **ESL outbound** on **3200**
 - **MongoDB** + **Redis** are unchanged
 - HTTP API stays on **5000**
+- **Web UI** (nginx) on **80** — proxies `/api` and `/ws` to the API (build with same-origin API; see `frontend/Dockerfile`)
+- **VEXYL-TTS** on the internal Docker network (`ws://vexyl-tts:8080`); health/debug on host **127.0.0.1:8088** (optional)
+
+The Compose files in this folder include **web** + **vexyl-tts** so one `docker compose up` brings up the full stack. The first image build for **vexyl-tts** downloads PyTorch and TTS weights (several GB) and can take a long time.
 
 Detailed Flow B design: [`doc/drachtio.md`](../doc/drachtio.md)
 
@@ -77,7 +81,9 @@ Verify:
 
 ```bash
 curl -sS http://127.0.0.1:5000/api/health
+curl -sS http://127.0.0.1/api/health
 docker exec kulloo-kamailio kamctl dispatcher show
+curl -sS http://127.0.0.1:8088/health
 ```
 
 Stop (keeps volumes):
@@ -115,7 +121,8 @@ docker compose -f Docker/docker-compose.flow-b.yml down
 
 ## Ports / firewall checklist (production)
 
-- **5000/tcp**: Kulloo HTTP API
+- **80/tcp**: Web UI (nginx; same host also proxies `/api` and `/ws` to the API)
+- **5000/tcp**: Kulloo HTTP API (direct access; Plivo webhooks often use `PUBLIC_BASE_URL` on 443/80 via your reverse proxy)
 - **3200/tcp**: ESL outbound (FreeSWITCH → Kulloo API)
 - **5060/udp + 5060/tcp**: SIP ingress (**Kamailio** for Flow A, **Drachtio** for Flow B)
 - **5070–5071/udp+tcp**: FreeSWITCH SIP host ports (optional for direct testing; carriers usually hit 5060 only)

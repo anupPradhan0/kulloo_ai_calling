@@ -1,6 +1,10 @@
-# Kuloo — default production stack (Flow A: Kamailio + FreeSWITCH + ESL)
+# Kulloo — full production stack (Flow A: Kamailio + FreeSWITCH + ESL + API + web UI + VEXYL-TTS)
 # Run from repository root:
 #   docker compose -f Docker/docker-compose.yml up -d --build
+#
+# Includes: MongoDB, Redis, backend API, nginx frontend (port 80), VEXYL-TTS (internal),
+# two FreeSWITCH instances, Kamailio on 5060.
+# First build of `vexyl-tts` is large (PyTorch + model); allow time and disk.
 #
 # Flow B (Drachtio instead of Kamailio): merge docker-compose.drachtio.yml — see that file.
 #
@@ -65,6 +69,8 @@ services:
       RECORDINGS_DIR: /recordings
       REDIS_URL: redis://redis:6379
       ESL_OUTBOUND_PORT: "3200"
+      # AI voice (AGENT_MODE=ai_voice): TTS service on Docker network
+      VEXYL_TTS_WS_URL: ws://vexyl-tts:8080
       # Agent WebRTC softphone — override via ../.env or environment
       # AGENT_MODE: webrtc
       # FREESWITCH_WSS_URL: wss://yourdomain.com:7443
@@ -78,6 +84,40 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - kulloo_net
+
+  # VEXYL-TTS — Python WebSocket TTS (AGENT_MODE=ai_voice). Heavy image; only api talks to it.
+  vexyl-tts:
+    build:
+      context: ../vexyl-tts
+      dockerfile: Dockerfile
+    image: kulloo-vexyl-tts:local
+    container_name: kulloo-vexyl-tts
+    hostname: vexyl-tts
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      VEXYL_TTS_HOST: "0.0.0.0"
+      VEXYL_TTS_SAMPLE_RATE: "8000"
+      VEXYL_TTS_DEVICE: cpu
+    ports:
+      - "127.0.0.1:8088:8080"
+    networks:
+      - kulloo_net
+
+  # React UI — nginx serves static files and proxies /api and /ws to the API container.
+  web:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: kulloo-frontend:local
+    container_name: kulloo-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
     networks:
       - kulloo_net
 

@@ -93,6 +93,7 @@ services:
       DRACHTIO_HOST: drachtio
       DRACHTIO_PORT: "9022"
       DRACHTIO_SECRET: ${DRACHTIO_SECRET:-kulloo-drachtio-secret}
+      VEXYL_TTS_WS_URL: ws://vexyl-tts:8080
     volumes:
       - recordings_data:/recordings
     depends_on:
@@ -102,6 +103,38 @@ services:
         condition: service_healthy
       drachtio:
         condition: service_started
+    networks:
+      - kulloo_net
+
+  vexyl-tts:
+    build:
+      context: ../vexyl-tts
+      dockerfile: Dockerfile
+    image: kulloo-vexyl-tts:local
+    container_name: kulloo-vexyl-tts
+    hostname: vexyl-tts
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      VEXYL_TTS_HOST: "0.0.0.0"
+      VEXYL_TTS_SAMPLE_RATE: "8000"
+      VEXYL_TTS_DEVICE: cpu
+    ports:
+      - "127.0.0.1:8088:8080"
+    networks:
+      - kulloo_net
+
+  web:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: kulloo-frontend:local
+    container_name: kulloo-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
     networks:
       - kulloo_net
 

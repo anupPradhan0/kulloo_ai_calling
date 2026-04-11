@@ -23,7 +23,7 @@
 
   <!-- Public IPv4 of this VPS — required so Plivo gets correct Contact/RTP in SDP.
        Replace with your actual server public IP. -->
-  <X-PRE-PROCESS cmd="set" data="external_sip_ip=148.135.138.190"/>
+  <X-PRE-PROCESS cmd="set" data="external_sip_ip=187.127.150.91"/>
   <X-PRE-PROCESS cmd="set" data="domain=$${external_sip_ip}"/>
 
   <!--
@@ -38,7 +38,7 @@
   <X-PRE-PROCESS cmd="set" data="kulloo_esl_port=3200"/>
 
   <!-- Recording webhook (optional — used if dialplan posts completion to API) -->
-  <X-PRE-PROCESS cmd="set" data="kulloo_recording_webhook_url=https://kulloocall.anuppradhan.in/api/calls/callbacks/freeswitch/recording"/>
+  <X-PRE-PROCESS cmd="set" data="kulloo_recording_webhook_url=http://187.127.150.91:5000/api/calls/callbacks/freeswitch/recording"/>
 
   <!-- Codec preferences — OPUS preferred, PCMU/PCMA as fallback -->
   <X-PRE-PROCESS cmd="set" data="global_codec_prefs=OPUS,PCMU,PCMA"/>
