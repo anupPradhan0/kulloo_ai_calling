@@ -30,11 +30,7 @@ Detailed Flow B design: [`doc/drachtio.md`](../doc/drachtio.md)
 
 ## HTTPS for the frontend (Let’s Encrypt)
 
-The `web` service expects certificates on the **host** at:
-
-`/etc/letsencrypt/live/<your-domain>/`
-
-Compose mounts that directory to `/etc/nginx/ssl` inside the container (see `frontend/nginx.conf`). Replace the domain in `docker-compose.yml` if yours differs from `kulloocall.anuppradhan.in`.
+The `web` service mounts the **whole** host tree `/etc/letsencrypt` read-only. Certbot keeps real files under `archive/`; `live/<domain>/*.pem` are symlinks, so mounting only `live/` breaks nginx inside Docker. Paths in `frontend/nginx.conf` use `live/<your-domain>/` — edit the domain there and in Compose if needed.
 
 **1. DNS** — `A` record for the hostname → your server’s public IP (propagate before continuing).
 
