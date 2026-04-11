@@ -170,7 +170,8 @@ services:
       - api
 
   kamailio:
-    image: kamailio/kamailio:5.7-alpine
+    # Docker Hub `kamailio/kamailio` is no longer pullable anonymously — use GHCR official image.
+    image: ghcr.io/kamailio/kamailio:5.8.7-bookworm
     container_name: kulloo-kamailio
     restart: unless-stopped
     ports:

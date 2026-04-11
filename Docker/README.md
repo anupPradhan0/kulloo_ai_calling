@@ -71,6 +71,8 @@ Inbound Event Socket (`fs_cli` on port **8021**) is configured in `freeswitch/co
 
 ## Flow A (default): Kamailio stack
 
+The Compose file uses **`ghcr.io/kamailio/kamailio:5.8.7-bookworm`** (GitHub Container Registry). The old Docker Hub name `kamailio/kamailio` may fail with *pull access denied / repository does not exist* — that is expected; do not switch back unless you use a registry that still publishes it.
+
 Start:
 
 ```bash
