@@ -1,6 +1,6 @@
 # GitHub Actions — deploy to your VPS
 
-Pushing to **`main`** runs **CI** (backend + frontend `pnpm build`), then **CD** (SSH into the server, `git reset` to `origin/main`, `docker compose build api`, `docker compose build web`, then `docker compose up -d`). Images build **one at a time** so small VPS hosts do not run out of RAM.
+Pushing to **`main`** runs **CI** (backend + frontend `pnpm build`), then **CD**: Docker **`api`** and **`web`** images are built on **GitHub Actions** (enough RAM), saved to a gzip tarball, **SCP**’d to your VPS, **`docker load`**, then **`docker compose up -d`**. The VPS does **not** compile TypeScript/Vite during deploy, which avoids OOM (**`signal: killed`**) on small instances.
 
 ## 1. One-time: SSH key for GitHub only
 
@@ -58,4 +58,5 @@ Add `environment: production` under the `deploy` job in `.github/workflows/ci-de
 - **SSH permission denied** — wrong key, user, or `authorized_keys`.
 - **`docker: command not found`** — install Docker Engine + Compose plugin on the server; ensure the SSH user can run `docker` (e.g. `usermod -aG docker deploy`).
 - **`git reset` fails** — avoid editing files by hand on the server; CI expects a clean tracking of `origin/main`.
-- **Long builds** — `command_timeout` is 45 minutes; increase in `.github/workflows/ci-deploy.yml` if VEXYL or images need more time.
+- **Long builds** — `command_timeout` is 45 minutes for SSH; the SCP step uses `command_timeout: 30m` for large image tarballs. Increase in `.github/workflows/ci-deploy.yml` if uploads stall.
+- **`signal: killed` during deploy** — if you ever build images **on the VPS** manually, use GitHub-built images instead, or add swap; the default workflow builds on GitHub for this reason.
