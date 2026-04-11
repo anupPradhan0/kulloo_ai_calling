@@ -7,8 +7,7 @@ const useRelativeApi =
   import.meta.env.VITE_USE_RELATIVE_API === 'true' ||
   import.meta.env.VITE_USE_RELATIVE_API === '1'
 
-/** Override with `VITE_API_BASE_URL` in `.env` (e.g. local backend). */
+/** Override with `VITE_API_BASE_URL` in `.env` (e.g. local backend). Empty = same origin as the page (`/api/...`). */
 export const DEFAULT_API_BASE_URL = useRelativeApi
   ? ''
-  : import.meta.env.VITE_API_BASE_URL?.trim() ||
-    'http://app.anuppradhan.in'
+  : import.meta.env.VITE_API_BASE_URL?.trim() || ''

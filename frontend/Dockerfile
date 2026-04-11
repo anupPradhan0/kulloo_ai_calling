@@ -5,9 +5,9 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-# Production: UI on kulloocall HTTPS; API on app (see frontend/.env.example)
-ARG VITE_API_BASE_URL=http://app.anuppradhan.in
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+# Same-origin /api and /ws via nginx (avoids mixed-content: HTTPS UI cannot call http:// API).
+ARG VITE_USE_RELATIVE_API=true
+ENV VITE_USE_RELATIVE_API=${VITE_USE_RELATIVE_API}
 RUN pnpm run build
 
 FROM nginx:1.27-alpine

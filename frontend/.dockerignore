@@ -3,5 +3,11 @@ dist
 .git
 *.md
 .env
-.env.*
+.env.local
+.env.development
+.env.development.local
+.env.production.local
+.env.test
+.env.test.local
 !.env.example
+!.env.production
