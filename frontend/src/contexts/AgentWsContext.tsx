@@ -63,7 +63,17 @@ export function AgentWsProvider({ baseUrl, children }: Props) {
   const clearLiveCall = useCallback(() => setLiveCall(null), [])
 
   const connect = useCallback(() => {
-    if (unmountedRef.current) return
+    if (unmountedRef.current) {
+      agentDebugLog('WS connect skipped — component unmounted')
+      return
+    }
+
+    // Close any existing socket before creating a new one
+    if (wsRef.current) {
+      agentDebugLog('WS closing previous socket before reconnect')
+      wsRef.current.close()
+      wsRef.current = null
+    }
 
     // Convert HTTP base URL → WS URL (ws:// or wss://)
     const base = normalizeBaseUrl(baseUrl)
@@ -81,7 +91,11 @@ export function AgentWsProvider({ baseUrl, children }: Props) {
     const isCurrent = (): boolean => wsRef.current === ws
 
     ws.onopen = () => {
-      if (!isCurrent()) return
+      if (!isCurrent()) {
+        agentDebugLog('WS open event ignored — socket replaced')
+        ws.close()
+        return
+      }
       retryRef.current = 0
       setWsStatus('connected')
       agentDebugLog('WS open — /ws/agent connected (inbound_call.offered events will appear here)')
