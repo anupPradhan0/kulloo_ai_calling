@@ -922,7 +922,20 @@ export class EslCallHandlerService {
       // ---- 6. Bridge caller to agent WebRTC endpoint ----
       // This blocks until (a) the agent answers + hangs up, (b) the caller hangs up,
       // or (c) the bridge times out (120s safety net).
-      const bridgeTarget = `user/${env.agentSipUsername}@${env.freeswitchDomain}`;
+      //
+      // Disable RTP/media timeouts on both legs — FreeSWITCH may otherwise kill the
+      // WebRTC B-leg after 30s if it doesn't detect bidirectional RTP (even though
+      // audio IS flowing). Also disable session timers on the bridge leg.
+      conn.execute("set", "rtp_timeout_sec=0", () => {});
+      conn.execute("set", "rtp_hold_timeout_sec=0", () => {});
+      conn.execute("set", "bridge_generate_comfort_noise=true", () => {});
+      // Disable session timers on the B-leg (agent) to prevent re-INVITE that kills the call
+      conn.execute("set", "sip_session_refresh=false", () => {});
+      conn.execute("set", "sip_enable_timer=false", () => {});
+      // Pass the same timeout settings to the bridge leg (B-leg)
+      conn.execute("set", "bridge_channel_vars=rtp_timeout_sec,rtp_hold_timeout_sec", () => {});
+
+      const bridgeTarget = `{rtp_timeout_sec=0,rtp_hold_timeout_sec=0,sip_enable_timer=false}user/${env.agentSipUsername}@${env.freeswitchDomain}`;
       this.log(ctx, "info", `[agent-bridge] Bridging to ${bridgeTarget}`);
 
       try {
