@@ -1,0 +1,23 @@
+<include>
+  <!--
+    Domain wrapper for modular users under directory/default/*.xml.
+
+    Without this, FreeSWITCH never associates users with $${domain}, so REGISTER
+    for sip:agent1@<domain> fails digest lookup and sofia shows zero registrations.
+  -->
+  <domain name="$${domain}">
+    <params>
+      <param
+        name="dial-string"
+        value="{presence_id=${dialed_user}@${domain_name}}${sofia_contact(${dialed_user}@${domain_name})}"
+      />
+    </params>
+    <groups>
+      <group name="default">
+        <users>
+          <X-PRE-PROCESS cmd="include" data="default/*.xml"/>
+        </users>
+      </group>
+    </groups>
+  </domain>
+</include>

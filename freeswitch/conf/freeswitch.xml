@@ -182,7 +182,8 @@
     The password MUST match AGENT_SIP_PASSWORD in backend/.env.
   -->
   <section name="directory" description="User Directory">
-    <X-PRE-PROCESS cmd="include" data="directory/default/*.xml"/>
+    <!-- default.xml wraps directory/default/*.xml in <domain name="$${domain}"> -->
+    <X-PRE-PROCESS cmd="include" data="directory/default.xml"/>
   </section>
 
 </document>
