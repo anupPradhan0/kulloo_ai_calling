@@ -1,18 +1,14 @@
+/** Production API origin; used when `VITE_API_BASE_URL` is not set in `.env`. */
+export const PUBLIC_DEFAULT_API_ORIGIN = 'https://kulloocall.anuppradhan.in'
+
 /**
- * When `VITE_USE_RELATIVE_API=true` (e.g. production Docker behind nginx), use same-origin
- * `/api/...` and `/ws/...` so one hostname serves UI + API.
- * Otherwise set `VITE_API_BASE_URL` for a separate backend origin.
+ * Set `VITE_API_BASE_URL` in `.env` to override (e.g. `http://127.0.0.1:5000` for a local backend).
+ * With Docker + nginx, the UI is often same-origin with the API; using this full URL still works.
  */
-const useRelativeApi =
-  import.meta.env.VITE_USE_RELATIVE_API === 'true' ||
-  import.meta.env.VITE_USE_RELATIVE_API === '1'
+export const DEFAULT_API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.trim() || PUBLIC_DEFAULT_API_ORIGIN
 
-/** Override with `VITE_API_BASE_URL` in `.env` (e.g. local backend). Empty = same origin as the page (`/api/...`). */
-export const DEFAULT_API_BASE_URL = useRelativeApi
-  ? ''
-  : import.meta.env.VITE_API_BASE_URL?.trim() || ''
-
-/** Resolved origin used for `/api` and `/ws` (relative mode → current page origin). */
+/** Resolved API origin (default or `VITE_API_BASE_URL`); falls back to `window.location.origin` only if base is empty. */
 export function getEffectiveApiBaseUrl(): string {
   const base = DEFAULT_API_BASE_URL.trim()
   if (base) return base.replace(/\/$/, '')
