@@ -39,7 +39,7 @@ export function normalizeBaseUrl(base: string): string {
   return base.replace(/\/$/, '')
 }
 
-function withPanelHeaders(headers: HeadersInit = {}): HeadersInit {
+function withPanelHeaders(headers: HeadersInit = {}): Headers {
   const h = new Headers(headers)
   const tok = getAgentPanelToken()
   if (tok) {
