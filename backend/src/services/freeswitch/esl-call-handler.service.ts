@@ -923,8 +923,13 @@ export class EslCallHandlerService {
       // Route the B-leg through Kamailio + rtpengine instead of FreeSWITCH's webrtc profile.
       // Kamailio handles SIP signaling + rtpengine handles ICE/DTLS/SRTP for the browser.
       // This fixes the 30-second ICE consent timeout (FreeSWITCH doesn't respond to STUN consent).
+      // Disable RTP timeouts on the B-leg so FreeSWITCH doesn't kill the bridge.
+      // Without these, FS sends BYE after its default rtp_timeout_sec (~30s).
+      conn.execute("set", "rtp_timeout_sec=0", () => {});
+      conn.execute("set", "rtp_hold_timeout_sec=0", () => {});
+
       const kamailioTarget = env.kamailioInternalHost || "127.0.0.1:5060";
-      const bridgeTarget = `sofia/internal/${env.agentSipUsername}@${kamailioTarget}`;
+      const bridgeTarget = `{rtp_timeout_sec=0,rtp_hold_timeout_sec=0}sofia/internal/${env.agentSipUsername}@${kamailioTarget}`;
       this.log(ctx, "info", `[agent-bridge] Bridging to ${bridgeTarget} (via Kamailio + rtpengine)`);
 
       try {
