@@ -1,6 +1,13 @@
 ##
 ## dispatcher.list — FreeSWITCH instance pool for Kamailio dispatcher module
 ##
+## ── WebRTC agent mode (backend AGENT_MODE=webrtc) ───────────────────────────
+## Browsers register SIP only on fs1 (host port 7443 → WSS). Kamailio round-robin
+## can send the PSTN INVITE to fs2; bridge(user/agent@domain) then runs on fs2,
+## where nobody is registered → no sip.js INVITE, Agent UI stuck on
+## "Connecting this call to your browser softphone…" until the bridge times out.
+## Fix: list only fs1 here, or mark fs2 inactive (flags=2) and dispatcher.reload.
+##
 ## Format:
 ##   setid  destination_uri            flags  priority  attrs
 ##

@@ -21,6 +21,12 @@ Because SIP signaling occurs directly between the browser and FreeSWITCH, the Ku
 * Exposes `inbound_call.offered`, `call.answered`, and `call.ended`.
 * Allows the Agent UI to show the "Incoming Call" overlay containing the actual Mongo `callId` and `from`/`to` fields.
 
+### Multi-node FreeSWITCH and Kamailio
+
+If you run **more than one** FreeSWITCH container (for example `fs1` and `fs2` in Docker Compose), Kamailio’s dispatcher normally **round-robins** between them. **WebRTC registrations are per instance:** the browser only registers to the node that exposes WSS (by default **`fs1`** on port **7443**). An inbound call that lands on **`fs2`** still triggers `inbound_call.offered` over `/ws/agent`, but FreeSWITCH runs `bridge user/agent1@…` on **fs2**, where that user is **not** registered, so **no SIP INVITE** reaches sip.js and the Answer button stays disabled until the bridge fails or times out.
+
+**Operational fix:** For `AGENT_MODE=webrtc`, either remove extra media nodes from `kamailio/dispatcher.list` or set the spare line’s flags to **`2`** (inactive), then `kamcmd … dispatcher.reload`. See comments at the top of `dispatcher.list`.
+
 ### 3. The ESL Call Handler Bridge
 
 When `AGENT_MODE=webrtc` is set, `EslCallHandlerService.executeCallFlow` switches tracks:

@@ -97,6 +97,13 @@
   max-width: 20rem;
 }
 
+.incoming-modal__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78em;
+  color: var(--text);
+  word-break: break-all;
+}
+
 .incoming-modal__actions {
   display: flex;
   gap: 1rem;
