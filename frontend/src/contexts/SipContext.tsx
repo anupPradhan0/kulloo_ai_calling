@@ -140,10 +140,6 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           sessionDescriptionHandlerFactoryOptions: {
             peerConnectionConfiguration: {
               iceServers,
-              // Force relay through TURN so ICE consent checks go to coturn
-              // (FreeSWITCH does not respond to STUN consent checks → 30s drop).
-              // coturn must have --external-ip set to the VPS public IP.
-              ...(hasTurn ? { iceTransportPolicy: 'relay' as RTCIceTransportPolicy } : {}),
             },
             iceGatheringTimeout: 5000,
           },
