@@ -191,12 +191,19 @@ services:
     container_name: kulloo-coturn
     restart: unless-stopped
     network_mode: host
-    volumes:
-      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
-    environment:
-      TURN_SECRET: ${TURN_SECRET:-kulloo-turn-secret-change-me}
-      TURN_REALM: ${TURN_REALM:-kulloocall.anuppradhan.in}
-    command: ["-c", "/etc/coturn/turnserver.conf"]
+    # Pass all config via CLI args — coturn config files don't expand env vars.
+    command:
+      - "--listening-port=3478"
+      - "--min-port=49152"
+      - "--max-port=49252"
+      - "--use-auth-secret"
+      - "--static-auth-secret=${TURN_SECRET:-kulloo-turn-secret-change-me}"
+      - "--realm=${TURN_REALM:-kulloocall.anuppradhan.in}"
+      - "--fingerprint"
+      - "--no-tls"
+      - "--no-dtls"
+      - "--log-file=stdout"
+      - "--no-stdout-log"
 
   kamailio:
     # Docker Hub `kamailio/kamailio` is no longer pullable anonymously — use GHCR official image.

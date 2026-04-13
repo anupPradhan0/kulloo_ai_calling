@@ -139,6 +139,9 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           sessionDescriptionHandlerFactoryOptions: {
             peerConnectionConfiguration: {
               iceServers,
+              // Force media through TURN relay so ICE consent checks go to coturn
+              // (FreeSWITCH does not respond to STUN consent checks → 30s drop)
+              ...(hasTurn ? { iceTransportPolicy: 'relay' as RTCIceTransportPolicy } : {}),
             },
             iceGatheringTimeout: 5000,
           },
