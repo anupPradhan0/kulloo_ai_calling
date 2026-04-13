@@ -173,6 +173,14 @@
           <param name="rtp-timeout-sec" value="300"/>
           <param name="rtp-hold-timeout-sec" value="300"/>
 
+          <!--
+            Disable SIP session timers on the WebRTC profile.
+            Session timers send periodic re-INVITE/UPDATE to keep the SIP dialog alive.
+            If the browser (sip.js) doesn't handle the re-INVITE correctly, FreeSWITCH
+            terminates the session — often at exactly 30s (the minimum timer value).
+          -->
+          <param name="enable-timer" value="false"/>
+
           <!-- NAT handling for agents behind home routers -->
           <param name="apply-nat-acl" value="nat.auto"/>
           <param name="aggressive-nat-detection" value="true"/>

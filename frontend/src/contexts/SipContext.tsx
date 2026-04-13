@@ -122,12 +122,11 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
 
         // Build ICE server list: STUN + TURN (if configured)
         const iceServers: RTCIceServer[] = [{ urls: creds.stunServer }]
-        const hasTurn = Array.isArray(creds.turnServers) && creds.turnServers.length > 0
-        if (hasTurn) {
-          for (const t of creds.turnServers!) {
+        if (Array.isArray(creds.turnServers) && creds.turnServers.length > 0) {
+          for (const t of creds.turnServers) {
             iceServers.push({ urls: t.urls, username: t.username, credential: t.credential })
           }
-          agentDebugLog(`TURN configured: ${creds.turnServers!.map(t => t.urls).join(', ')}`)
+          agentDebugLog(`TURN configured: ${creds.turnServers.map(t => t.urls).join(', ')}`)
         }
 
         const ua = new UserAgent({
@@ -140,9 +139,6 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           sessionDescriptionHandlerFactoryOptions: {
             peerConnectionConfiguration: {
               iceServers,
-              // Force relay through TURN so ICE consent checks go to coturn
-              // (FreeSWITCH does not respond to STUN consent checks → 30s drop)
-              ...(hasTurn ? { iceTransportPolicy: 'relay' as RTCIceTransportPolicy } : {}),
             },
             iceGatheringTimeout: 5000,
           },
