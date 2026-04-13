@@ -140,9 +140,9 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           sessionDescriptionHandlerFactoryOptions: {
             peerConnectionConfiguration: {
               iceServers,
-              // Force media through TURN relay so ICE consent checks go to coturn
-              // (FreeSWITCH does not respond to STUN consent checks → 30s drop)
-              ...(hasTurn ? { iceTransportPolicy: 'relay' as RTCIceTransportPolicy } : {}),
+              // TURN is available as fallback but don't force relay — direct ICE
+              // works for audio. Forced relay fails instantly on this VPS (hairpin
+              // NAT or firewall blocks coturn relay ports).
             },
             iceGatheringTimeout: 5000,
           },
