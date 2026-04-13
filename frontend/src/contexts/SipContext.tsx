@@ -122,11 +122,12 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
 
         // Build ICE server list: STUN + TURN (if configured)
         const iceServers: RTCIceServer[] = [{ urls: creds.stunServer }]
-        if (Array.isArray(creds.turnServers) && creds.turnServers.length > 0) {
-          for (const t of creds.turnServers) {
+        const hasTurn = Array.isArray(creds.turnServers) && creds.turnServers.length > 0
+        if (hasTurn) {
+          for (const t of creds.turnServers!) {
             iceServers.push({ urls: t.urls, username: t.username, credential: t.credential })
           }
-          agentDebugLog(`TURN configured: ${creds.turnServers.map(t => t.urls).join(', ')}`)
+          agentDebugLog(`TURN configured: ${creds.turnServers!.map(t => t.urls).join(', ')}`)
         }
 
         const ua = new UserAgent({
