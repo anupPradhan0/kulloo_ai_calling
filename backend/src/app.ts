@@ -20,6 +20,19 @@ export const app = express();
 app.set("trust proxy", 1);
 app.set("etag", false);
 
+// Skip all Express middleware for WebSocket upgrade requests.
+// The ws library handles these at the http.Server level (see server.ts).
+// Without this, Express middleware runs and eventually sends HTTP responses
+// on the upgraded socket, causing "Invalid frame header" errors in browsers.
+app.use((req, res, next) => {
+  if (req.headers.upgrade?.toLowerCase() === "websocket") {
+    // Don't process WebSocket upgrades through Express at all.
+    // The ws library will handle the upgrade event on the http.Server.
+    return;
+  }
+  next();
+});
+
 app.use(cors());
 app.use(helmet());
 
@@ -45,16 +58,6 @@ app.get("/api/recordings", listAllRecordings);
 app.get("/api/recordings/", listAllRecordings);
 
 app.use("/api", apiRouter);
-
-// WebSocket paths are handled by ws library on the http.Server level (see server.ts).
-// This middleware prevents Express from sending 404s on the upgraded socket.
-app.use("/ws", (_req, res) => {
-  // If we reach here, the upgrade didn't happen (ws library didn't intercept).
-  // This shouldn't happen normally, but return 400 to avoid 404 handler running.
-  if (!res.headersSent) {
-    res.status(400).send("WebSocket upgrade required");
-  }
-});
 
 app.use(notFoundHandler);
 app.use(errorHandler);
