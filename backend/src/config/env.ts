@@ -177,6 +177,12 @@ export const env = {
    * Prevents two operators registering the same SIP agent extension. Default true in production-minded setups.
    */
   agentSingleLockEnabled: parseBoolEnv("AGENT_SINGLE_LOCK_ENABLED", true),
+  /**
+   * Optional login gate for the Agent browser UI. When BOTH are non-empty, the Agent tab
+   * requires POST /api/agent/panel/login before credentials, session, status, and /ws/agent.
+   */
+  agentPanelUsername: process.env.AGENT_PANEL_USERNAME?.trim() || "",
+  agentPanelPassword: process.env.AGENT_PANEL_PASSWORD?.trim() || "",
 
   // ---------------------------------------------------------------------------
   // Recording storage (local + optional S3 offload)

@@ -20,6 +20,7 @@ import {
   type ReactNode,
 } from 'react'
 import { agentDebugLog } from '../agent/agentDebugLog'
+import { getAgentPanelToken } from '../agent/agentPanelToken'
 import { normalizeBaseUrl } from '../api/callsApi'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -77,10 +78,16 @@ export function AgentWsProvider({ baseUrl, children }: Props) {
 
     // Convert HTTP base URL → WS URL (ws:// or wss://)
     const base = normalizeBaseUrl(baseUrl)
-    const wsUrl =
+    let wsUrl =
       base === ''
         ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/agent`
         : base.replace(/^http/, 'ws') + '/ws/agent'
+    const panelTok = getAgentPanelToken()
+    if (panelTok) {
+      const u = new URL(wsUrl)
+      u.searchParams.set('panelToken', panelTok)
+      wsUrl = u.toString()
+    }
 
     agentDebugLog(`WS connecting: ${wsUrl}`)
     setWsStatus('connecting')

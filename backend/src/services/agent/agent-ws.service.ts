@@ -17,6 +17,10 @@ import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import type { Server as HttpServer } from "http";
 import type { Duplex } from "stream";
+import {
+  isAgentPanelAuthConfigured,
+  verifyAgentPanelToken,
+} from "../../modules/agent/services/agent-panel-auth.service";
 import { logger } from "../../utils/logger";
 
 /** Typed events streamed to each connected agent browser. */
@@ -40,17 +44,35 @@ export class AgentWsService {
 
     // Intercept upgrade requests BEFORE Express can process them.
     httpServer.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-      const pathname = new URL(req.url || "/", `http://${req.headers.host}`).pathname;
+      let pathname: string;
+      let fullUrl: URL;
+      try {
+        fullUrl = new URL(req.url || "/", `http://${req.headers.host ?? "localhost"}`);
+        pathname = fullUrl.pathname;
+      } catch {
+        return;
+      }
 
-      if (pathname === "/ws/agent") {
+      if (pathname !== "/ws/agent") {
+        return;
+      }
+
+      void (async () => {
+        if (isAgentPanelAuthConfigured()) {
+          const panelToken = fullUrl.searchParams.get("panelToken") ?? "";
+          if (!(await verifyAgentPanelToken(panelToken))) {
+            socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+            socket.destroy();
+            return;
+          }
+        }
         this.wss.handleUpgrade(req, socket, head, (ws) => {
           this.wss.emit("connection", ws, req);
         });
-      } else {
-        // Not our path — destroy the socket to prevent Express from responding.
-        // Other WebSocket services (like AiForkWsService) can handle their own paths.
-        // If no one handles it, the connection just closes.
-      }
+      })().catch((err: unknown) => {
+        logger.error("agent_ws_upgrade_failed", { component: "agent-ws", err });
+        socket.destroy();
+      });
     });
 
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {

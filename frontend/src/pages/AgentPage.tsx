@@ -4,9 +4,13 @@ import { DEFAULT_API_BASE_URL } from '../api/constants'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import {
   claimAgentSession,
+  fetchAgentPanelConfig,
   heartbeatAgentSession,
+  logoutAgentPanel,
+  normalizeBaseUrl,
   releaseAgentSession,
 } from '../api/callsApi'
+import { clearAgentPanelToken, getAgentPanelToken } from '../agent/agentPanelToken'
 import { agentDebugLog } from '../agent/agentDebugLog'
 import { getOrCreateAgentSessionId } from '../agent/sessionId'
 import { AgentDebugPanel } from '../components/AgentDebugPanel'
@@ -17,17 +21,22 @@ import { SipProvider, useSip } from '../contexts/SipContext'
 import { StatusToggle } from '../components/StatusToggle'
 import { IncomingCallModal } from '../components/IncomingCallModal'
 import { ActiveCallPanel } from '../components/ActiveCallPanel'
+import { AgentLoginForm } from '../components/AgentLoginForm'
 import './AgentPage.css'
 
 function AgentPageContent({
   baseUrl,
   apiBase,
   onBaseUrlChange,
+  showPanelLogout,
+  onPanelLogout,
 }: {
   baseUrl: string
   /** Debounced origin used for API / WS / SIP (avoids reconnect on every keystroke). */
   apiBase: string
   onBaseUrlChange: (url: string) => void
+  showPanelLogout: boolean
+  onPanelLogout: () => void
 }) {
   const [refreshToken, setRefreshToken] = useState(0)
   const bumpHistory = () => setRefreshToken((n) => n + 1)
@@ -50,7 +59,18 @@ function AgentPageContent({
             ) so Plivo fetches XML and routes the call (IVR or dial Kamailio / FreeSWITCH).
           </aside>
         </div>
-        <StatusToggle baseUrl={apiBase} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+          {showPanelLogout ? (
+            <button
+              type="button"
+              className="agent-panel-logout"
+              onClick={onPanelLogout}
+            >
+              Log out
+            </button>
+          ) : null}
+          <StatusToggle baseUrl={apiBase} />
+        </div>
       </header>
 
       <div className="agent-layout">
@@ -84,13 +104,56 @@ function AgentPageContent({
 
 type ClaimState = 'loading' | 'ready' | 'blocked'
 
+type PanelGate = 'loading' | 'login' | 'ready'
+
 const API_BASE_DEBOUNCE_MS = 450
+
+function isPanelAuthErrorMessage(msg: string): boolean {
+  return msg.includes('AGENT_PANEL_AUTH_REQUIRED') || msg.includes('Agent panel login required')
+}
 
 export function AgentPage() {
   const [baseUrl, setBaseUrl] = useState(DEFAULT_API_BASE_URL)
   const apiBase = useDebouncedValue(baseUrl, API_BASE_DEBOUNCE_MS)
+  const apiOrigin = useMemo(
+    () => normalizeBaseUrl(baseUrl) || getEffectiveApiBaseUrl(),
+    [baseUrl],
+  )
   const sessionId = useMemo(() => getOrCreateAgentSessionId(), [])
   const [claim, setClaim] = useState<ClaimState>('loading')
+  const [panelGate, setPanelGate] = useState<PanelGate>('loading')
+  const [panelAuthConfigured, setPanelAuthConfigured] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchAgentPanelConfig(apiOrigin)
+      .then((cfg) => {
+        if (cancelled) return
+        if (!cfg.authRequired) {
+          setPanelAuthConfigured(false)
+          setPanelGate('ready')
+          return
+        }
+        setPanelAuthConfigured(true)
+        setPanelGate(getAgentPanelToken() ? 'ready' : 'login')
+      })
+      .catch(() => {
+        if (cancelled) return
+        setPanelAuthConfigured(false)
+        setPanelGate('ready')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [apiOrigin])
+
+  const handlePanelLogout = useCallback(() => {
+    void logoutAgentPanel(apiBase).finally(() => {
+      clearAgentPanelToken()
+      setPanelGate('login')
+      setClaim('loading')
+    })
+  }, [apiBase])
 
   const tryClaim = useCallback(async () => {
     // Stay on the workstation UI during reclaim after the debounced URL changes (no full-page flash).
@@ -105,20 +168,35 @@ export function AgentPage() {
       }
       setClaim(ok ? 'ready' : 'blocked')
     } catch (e) {
-      agentDebugLog(`session/claim error: ${e instanceof Error ? e.message : String(e)}`)
+      const msg = e instanceof Error ? e.message : String(e)
+      agentDebugLog(`session/claim error: ${msg}`)
+      if (isPanelAuthErrorMessage(msg)) {
+        clearAgentPanelToken()
+        setPanelGate('login')
+        setClaim('loading')
+        return
+      }
       setClaim('blocked')
     }
   }, [apiBase, sessionId])
 
   useEffect(() => {
+    if (panelGate !== 'ready') return
     void tryClaim()
-  }, [tryClaim])
+  }, [panelGate, tryClaim])
 
   useEffect(() => {
     if (claim !== 'ready') return
     const t = window.setInterval(() => {
       void heartbeatAgentSession(apiBase, sessionId).catch((e) => {
-        agentDebugLog(`session/heartbeat failed: ${e instanceof Error ? e.message : String(e)} — lock may be lost`)
+        const msg = e instanceof Error ? e.message : String(e)
+        agentDebugLog(`session/heartbeat failed: ${msg} — lock may be lost`)
+        if (isPanelAuthErrorMessage(msg)) {
+          clearAgentPanelToken()
+          setPanelGate('login')
+          setClaim('loading')
+          return
+        }
         setClaim('blocked')
       })
     }, 25_000)
@@ -130,6 +208,25 @@ export function AgentPage() {
       void releaseAgentSession(apiBase, sessionId)
     }
   }, [apiBase, sessionId])
+
+  if (panelGate === 'loading') {
+    return (
+      <div className="agent-page agent-page--gate">
+        <p className="agent-gate-msg">Loading agent…</p>
+      </div>
+    )
+  }
+
+  if (panelGate === 'login') {
+    return (
+      <AgentLoginForm
+        apiBase={apiOrigin}
+        onLoggedIn={() => {
+          setPanelGate('ready')
+        }}
+      />
+    )
+  }
 
   if (claim === 'loading') {
     return (
@@ -161,6 +258,8 @@ export function AgentPage() {
           baseUrl={baseUrl}
           apiBase={apiBase}
           onBaseUrlChange={setBaseUrl}
+          showPanelLogout={panelAuthConfigured}
+          onPanelLogout={handlePanelLogout}
         />
       </SipProvider>
     </AgentWsProvider>

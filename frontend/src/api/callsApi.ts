@@ -1,4 +1,5 @@
 import { DEFAULT_API_BASE_URL } from './constants'
+import { getAgentPanelToken } from '../agent/agentPanelToken'
 
 export type CallDirection = 'inbound' | 'outbound'
 
@@ -36,6 +37,15 @@ export type OutboundHelloBody = {
 
 export function normalizeBaseUrl(base: string): string {
   return base.replace(/\/$/, '')
+}
+
+function withPanelHeaders(headers: HeadersInit = {}): HeadersInit {
+  const h = new Headers(headers)
+  const tok = getAgentPanelToken()
+  if (tok) {
+    h.set('X-Agent-Panel-Token', tok)
+  }
+  return h
 }
 
 export async function fetchRecentCalls(
@@ -101,9 +111,9 @@ export async function fetchAgentCredentials(
   agentSessionId?: string,
 ): Promise<AgentCredentials> {
   const url = `${normalizeBaseUrl(baseUrl)}/api/agent/credentials`
-  const headers: HeadersInit = {}
+  const headers = withPanelHeaders()
   if (agentSessionId) {
-    headers['X-Agent-Session-Id'] = agentSessionId
+    headers.set('X-Agent-Session-Id', agentSessionId)
   }
   const res = await fetch(url, { headers })
   const text = await res.text()
@@ -119,7 +129,7 @@ export async function claimAgentSession(
   const url = `${normalizeBaseUrl(baseUrl)}/api/agent/session/claim`
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withPanelHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ sessionId }),
   })
   if (res.status === 409) {
@@ -139,7 +149,7 @@ export async function heartbeatAgentSession(
   const url = `${normalizeBaseUrl(baseUrl)}/api/agent/session/heartbeat`
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'X-Agent-Session-Id': sessionId },
+    headers: withPanelHeaders({ 'X-Agent-Session-Id': sessionId }),
   })
   if (!res.ok) {
     const text = await res.text()
@@ -151,7 +161,7 @@ export async function releaseAgentSession(baseUrl: string, sessionId: string): P
   const url = `${normalizeBaseUrl(baseUrl)}/api/agent/session/release`
   await fetch(url, {
     method: 'POST',
-    headers: { 'X-Agent-Session-Id': sessionId },
+    headers: withPanelHeaders({ 'X-Agent-Session-Id': sessionId }),
     keepalive: true,
   })
 }
@@ -163,11 +173,58 @@ export async function setAgentStatus(
   const url = `${normalizeBaseUrl(baseUrl)}/api/agent/status`
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: withPanelHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ status }),
   })
   if (!res.ok) {
     const text = await res.text()
     throw new Error(text || `${res.status} ${res.statusText}`)
   }
+}
+
+export async function fetchAgentPanelConfig(
+  baseUrl: string,
+): Promise<{ authRequired: boolean }> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/panel/config`
+  const res = await fetch(url)
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(text || `${res.status} ${res.statusText}`)
+  }
+  const j = JSON.parse(text) as { success: boolean; authRequired: boolean }
+  return { authRequired: Boolean(j.authRequired) }
+}
+
+export async function loginAgentPanel(
+  baseUrl: string,
+  username: string,
+  password: string,
+): Promise<string> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/panel/login`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+  const text = await res.text()
+  if (!res.ok) {
+    let message = `${res.status} ${res.statusText}`
+    try {
+      const j = JSON.parse(text) as { message?: string }
+      message = j.message ?? message
+    } catch {
+      if (text) message = text
+    }
+    throw new Error(message)
+  }
+  const j = JSON.parse(text) as { success: boolean; token?: string }
+  if (!j.token) {
+    throw new Error('No token in response')
+  }
+  return j.token
+}
+
+export async function logoutAgentPanel(baseUrl: string): Promise<void> {
+  const url = `${normalizeBaseUrl(baseUrl)}/api/agent/panel/logout`
+  await fetch(url, { method: 'POST', headers: withPanelHeaders() })
 }

@@ -150,3 +150,20 @@
 .agent-gate-retry:hover {
   filter: brightness(1.05);
 }
+
+.agent-panel-logout {
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.agent-panel-logout:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}

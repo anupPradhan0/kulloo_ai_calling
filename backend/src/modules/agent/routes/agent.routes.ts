@@ -18,8 +18,77 @@ import {
   releaseAgentLock,
   verifyAgentLock,
 } from "../services/agent-lock.service";
+import {
+  isAgentPanelAuthConfigured,
+  issueAgentPanelToken,
+  revokeAgentPanelToken,
+  validateAgentPanelCredentials,
+  verifyAgentPanelToken,
+} from "../services/agent-panel-auth.service";
 
 export const agentRouter = Router();
+
+function panelTokenFrom(req: Request): string | undefined {
+  const raw = req.headers["x-agent-panel-token"];
+  return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
+}
+
+async function requirePanelAuth(req: Request, res: Response): Promise<boolean> {
+  if (!isAgentPanelAuthConfigured()) {
+    return true;
+  }
+  const token = panelTokenFrom(req);
+  if (!(await verifyAgentPanelToken(token))) {
+    res.status(401).json({
+      success: false,
+      code: "AGENT_PANEL_AUTH_REQUIRED",
+      message: "Agent panel login required.",
+    });
+    return false;
+  }
+  return true;
+}
+
+/** Public: whether the Agent UI must log in first (credentials set in env). */
+agentRouter.get("/panel/config", (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    authRequired: isAgentPanelAuthConfigured(),
+  });
+});
+
+agentRouter.post("/panel/login", async (req: Request, res: Response) => {
+  if (!isAgentPanelAuthConfigured()) {
+    res.status(400).json({
+      success: false,
+      message: "Agent panel login is not configured (set AGENT_PANEL_USERNAME and AGENT_PANEL_PASSWORD).",
+    });
+    return;
+  }
+  const { username, password } = req.body as { username?: string; password?: string };
+  if (typeof username !== "string" || typeof password !== "string") {
+    res.status(400).json({ success: false, message: "username and password are required." });
+    return;
+  }
+  if (!validateAgentPanelCredentials(username, password)) {
+    res.status(401).json({ success: false, message: "Invalid username or password." });
+    return;
+  }
+  try {
+    const token = await issueAgentPanelToken();
+    logger.info("agent_panel_login_ok", { component: "agent-panel" });
+    res.json({ success: true, token });
+  } catch (err) {
+    logger.error("agent_panel_login_error", { err });
+    res.status(500).json({ success: false, message: "Could not create session." });
+  }
+});
+
+agentRouter.post("/panel/logout", async (req: Request, res: Response) => {
+  const token = panelTokenFrom(req);
+  await revokeAgentPanelToken(token);
+  res.json({ success: true });
+});
 
 function sessionIdFrom(req: Request): string | undefined {
   const raw = req.headers["x-agent-session-id"];
@@ -34,6 +103,9 @@ function sessionIdFrom(req: Request): string | undefined {
  * When AGENT_SINGLE_LOCK_ENABLED, requires X-Agent-Session-Id matching an active claim.
  */
 agentRouter.get("/credentials", async (req: Request, res: Response) => {
+  if (!(await requirePanelAuth(req, res))) {
+    return;
+  }
   if (env.agentSingleLockEnabled) {
     const sid = sessionIdFrom(req);
     if (!sid) {
@@ -67,6 +139,9 @@ agentRouter.get("/credentials", async (req: Request, res: Response) => {
 });
 
 agentRouter.post("/session/claim", async (req: Request, res: Response) => {
+  if (!(await requirePanelAuth(req, res))) {
+    return;
+  }
   if (!env.agentSingleLockEnabled) {
     res.json({ success: true, locked: false });
     return;
@@ -92,6 +167,9 @@ agentRouter.post("/session/claim", async (req: Request, res: Response) => {
 });
 
 agentRouter.post("/session/heartbeat", async (req: Request, res: Response) => {
+  if (!(await requirePanelAuth(req, res))) {
+    return;
+  }
   if (!env.agentSingleLockEnabled) {
     res.json({ success: true });
     return;
@@ -111,6 +189,9 @@ agentRouter.post("/session/heartbeat", async (req: Request, res: Response) => {
 });
 
 agentRouter.post("/session/release", async (req: Request, res: Response) => {
+  if (!(await requirePanelAuth(req, res))) {
+    return;
+  }
   if (!env.agentSingleLockEnabled) {
     res.json({ success: true });
     return;
@@ -128,7 +209,10 @@ agentRouter.post("/session/release", async (req: Request, res: Response) => {
  * Agent sets their availability status.
  * v1: logged only — future versions will persist to DB and route calls to available agents.
  */
-agentRouter.post("/status", (req: Request, res: Response) => {
+agentRouter.post("/status", async (req: Request, res: Response) => {
+  if (!(await requirePanelAuth(req, res))) {
+    return;
+  }
   const { status } = req.body as { status?: string };
 
   if (status !== "available" && status !== "offline") {
