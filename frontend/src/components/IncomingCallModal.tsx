@@ -30,9 +30,18 @@ export function IncomingCallModal() {
   const { pendingInvitation, acceptCall, rejectCall, sipStatus, activeSession } = useSip()
   const { liveCall } = useAgentWs()
   const [showBridgeHint, setShowBridgeHint] = useState(false)
+  // Track the callId we already answered so the modal stays hidden even if
+  // the SIP session drops mid-call (activeSession becomes null while liveCall
+  // is still set because call.ended hasn't arrived yet from the backend).
+  const [answeredCallId, setAnsweredCallId] = useState<string | null>(null)
 
   const canUseSip = Boolean(pendingInvitation)
   const waitingForSip = Boolean(liveCall && !pendingInvitation)
+
+  // Reset answeredCallId when the backend reports call.ended (liveCall clears)
+  useEffect(() => {
+    if (!liveCall) setAnsweredCallId(null)
+  }, [liveCall])
 
   useEffect(() => {
     if (!waitingForSip) {
@@ -43,13 +52,20 @@ export function IncomingCallModal() {
     return () => window.clearTimeout(t)
   }, [waitingForSip, liveCall?.callId])
 
-  // Hide modal when: nothing is happening, OR the call is already connected (active session)
-  if ((!liveCall && !pendingInvitation) || activeSession) return null
+  // Hide modal when:
+  //  - nothing is happening
+  //  - call is actively connected (activeSession)
+  //  - we already answered this call (even if SIP session dropped mid-call)
+  const alreadyHandled = Boolean(liveCall && answeredCallId === liveCall.callId)
+  if ((!liveCall && !pendingInvitation) || activeSession || alreadyHandled) return null
 
   const { from, to } = callerDisplay(liveCall, pendingInvitation)
 
   const handleAnswer = () => {
-    if (pendingInvitation) void acceptCall()
+    if (pendingInvitation) {
+      setAnsweredCallId(liveCall?.callId ?? null)
+      void acceptCall()
+    }
   }
   const handleDecline = () => {
     if (pendingInvitation) rejectCall()
