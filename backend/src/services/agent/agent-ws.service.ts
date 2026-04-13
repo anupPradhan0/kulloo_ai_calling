@@ -16,6 +16,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import type { Server as HttpServer } from "http";
+import type { Duplex } from "stream";
 import { logger } from "../../utils/logger";
 
 /** Typed events streamed to each connected agent browser. */
@@ -30,11 +31,26 @@ export class AgentWsService {
   private clients = new Set<WebSocket>();
 
   constructor(httpServer: HttpServer) {
+    // Use noServer mode so we manually handle the upgrade event.
+    // This prevents Express from ever seeing WebSocket requests.
     this.wss = new WebSocketServer({
-      server: httpServer,
-      path: "/ws/agent",
-      // Avoid permessage-deflate behind nginx / some browsers — mismatches can drop the socket right after open (client sees 1006).
+      noServer: true,
       perMessageDeflate: false,
+    });
+
+    // Intercept upgrade requests BEFORE Express can process them.
+    httpServer.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+      const pathname = new URL(req.url || "/", `http://${req.headers.host}`).pathname;
+
+      if (pathname === "/ws/agent") {
+        this.wss.handleUpgrade(req, socket, head, (ws) => {
+          this.wss.emit("connection", ws, req);
+        });
+      } else {
+        // Not our path — destroy the socket to prevent Express from responding.
+        // Other WebSocket services (like AiForkWsService) can handle their own paths.
+        // If no one handles it, the connection just closes.
+      }
     });
 
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
