@@ -138,10 +138,12 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
               const fromUri =
                 invitation.remoteIdentity?.uri?.toString() ?? invitation.request?.from?.uri?.toString() ?? '?'
               agentDebugLog(`SIP INVITE received (incoming leg) from ${fromUri}`)
+              agentDebugLog(`Invitation initial state: ${String(invitation.state)}`)
               setPendingInvitation(invitation)
 
               // If caller hangs up before agent answers, clear the state
               invitation.stateChange.addListener((state) => {
+                agentDebugLog(`Invitation state changed: ${String(state)}`)
                 if (state === 'Terminated') {
                   setPendingInvitation((prev) => (prev === invitation ? null : prev))
                   setActiveSession((prev) => (prev === invitation ? null : prev))
