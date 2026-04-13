@@ -24,7 +24,8 @@
   <!-- Public IPv4 of this VPS — required so Plivo gets correct Contact/RTP in SDP.
        Replace with your actual server public IP. -->
   <X-PRE-PROCESS cmd="set" data="external_sip_ip=187.127.150.91"/>
-  <X-PRE-PROCESS cmd="set" data="domain=$${external_sip_ip}"/>
+  <!-- Domain for SIP registrations — must match FREESWITCH_DOMAIN in backend/.env -->
+  <X-PRE-PROCESS cmd="set" data="domain=kulloocall.anuppradhan.in"/>
 
   <!--
     Kulloo API ESL outbound connection target.

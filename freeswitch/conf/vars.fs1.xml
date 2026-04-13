@@ -19,7 +19,8 @@
 
   <!-- Public IPv4 of the server (same for all FS instances on one server) -->
   <X-PRE-PROCESS cmd="set" data="external_sip_ip=187.127.150.91"/>
-  <X-PRE-PROCESS cmd="set" data="domain=$${external_sip_ip}"/>
+  <!-- Domain for SIP registrations — must match FREESWITCH_DOMAIN in backend/.env -->
+  <X-PRE-PROCESS cmd="set" data="domain=kulloocall.anuppradhan.in"/>
 
   <!--
     Kulloo API ESL connection.
