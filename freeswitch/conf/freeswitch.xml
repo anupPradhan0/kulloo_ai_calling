@@ -152,6 +152,15 @@
           <param name="inbound-codec-prefs"  value="OPUS,PCMU,PCMA"/>
           <param name="outbound-codec-prefs" value="OPUS,PCMU,PCMA"/>
 
+          <!--
+            ICE candidate generation — REQUIRED for WebRTC SDP.
+            Without these, FreeSWITCH may omit ICE candidates from the SDP offer
+            sent to the browser during bridge, causing setRemoteDescription() to fail
+            and the call to terminate immediately after accept.
+          -->
+          <param name="local-network-acl" value="localnet.auto"/>
+          <param name="apply-candidate-acl" value="localnet.auto"/>
+
           <!-- NAT handling for agents behind home routers -->
           <param name="apply-nat-acl" value="nat.auto"/>
           <param name="aggressive-nat-detection" value="true"/>

@@ -128,7 +128,9 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
             server: creds.wssUrl,
           },
           sessionDescriptionHandlerFactoryOptions: {
-            iceServers: [{ urls: creds.stunServer }],
+            peerConnectionConfiguration: {
+              iceServers: [{ urls: creds.stunServer }],
+            },
             iceGatheringTimeout: 5000,
           },
           // Don't auto-answer — we handle invitations manually
@@ -139,6 +141,18 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
                 invitation.remoteIdentity?.uri?.toString() ?? invitation.request?.from?.uri?.toString() ?? '?'
               agentDebugLog(`SIP INVITE received (incoming leg) from ${fromUri}`)
               agentDebugLog(`Invitation initial state: ${String(invitation.state)}`)
+
+              // Log SDP offer from FreeSWITCH for debugging media negotiation
+              const sdpBody = invitation.request?.body
+              if (sdpBody) {
+                const hasIce = sdpBody.includes('a=ice-ufrag')
+                const hasDtls = sdpBody.includes('a=fingerprint')
+                const hasOpus = sdpBody.includes('opus')
+                agentDebugLog(`SIP INVITE SDP: ice=${hasIce} dtls=${hasDtls} opus=${hasOpus} len=${sdpBody.length}`)
+              } else {
+                agentDebugLog('SIP INVITE SDP: (no body)')
+              }
+
               setPendingInvitation(invitation)
 
               // If caller hangs up before agent answers, clear the state
@@ -204,18 +218,26 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
     const invitation = pendingInvitation
     setPendingInvitation(null)
 
-    await invitation.accept({
-      sessionDescriptionHandlerOptions: {
-        constraints: { audio: true, video: false },
-      },
-    })
-    setActiveSession(invitation)
-    // Slight delay to let ICE settle before attaching audio
-    setTimeout(() => attachRemoteAudio(invitation), 300)
+    try {
+      agentDebugLog('SIP accepting invitation …')
+      await invitation.accept({
+        sessionDescriptionHandlerOptions: {
+          constraints: { audio: true, video: false },
+        },
+      })
+      agentDebugLog(`SIP invitation accepted — session state: ${String(invitation.state)}`)
+      setActiveSession(invitation)
+      // Slight delay to let ICE settle before attaching audio
+      setTimeout(() => attachRemoteAudio(invitation), 300)
 
-    invitation.stateChange.addListener((state) => {
-      if (state === 'Terminated') setActiveSession(null)
-    })
+      invitation.stateChange.addListener((state) => {
+        if (state === 'Terminated') setActiveSession(null)
+      })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      agentDebugLog(`SIP accept FAILED: ${msg}`)
+      console.error('[SipContext] invitation.accept() error:', err)
+    }
   }, [pendingInvitation])
 
   // ── rejectCall ────────────────────────────────────────────────────────────
