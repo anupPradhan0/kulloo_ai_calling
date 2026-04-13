@@ -33,6 +33,8 @@ export class AgentWsService {
     this.wss = new WebSocketServer({
       server: httpServer,
       path: "/ws/agent",
+      // Avoid permessage-deflate behind nginx / some browsers — mismatches can drop the socket right after open (client sees 1006).
+      perMessageDeflate: false,
     });
 
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
