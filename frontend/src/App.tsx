@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import { getEffectiveApiBaseUrl } from './api/constants'
 import { ApiExplorer } from './components/ApiExplorer'
@@ -6,6 +6,11 @@ import { AgentPage } from './pages/AgentPage'
 
 export default function App() {
   const [tab, setTab] = useState<'explorer' | 'agent'>('explorer')
+  /** Avoid loading WS/SIP/mic until the user opens Agent at least once. */
+  const [agentMounted, setAgentMounted] = useState(false)
+  useEffect(() => {
+    if (tab === 'agent') setAgentMounted(true)
+  }, [tab])
 
   return (
     <div className="app">
@@ -36,13 +41,19 @@ export default function App() {
           </button>
         </nav>
       </header>
-      {tab === 'explorer' ? (
-        <div className="app-main app-main--narrow">
-          <ApiExplorer />
+      {/* Keep both mounted so Agent WS/SIP stay up when switching tabs (avoids disconnect storms). */}
+      <div
+        className="app-main app-main--narrow"
+        hidden={tab !== 'explorer'}
+        aria-hidden={tab !== 'explorer'}
+      >
+        <ApiExplorer />
+      </div>
+      {agentMounted ? (
+        <div hidden={tab !== 'agent'} aria-hidden={tab !== 'agent'}>
+          <AgentPage />
         </div>
-      ) : (
-        <AgentPage />
-      )}
+      ) : null}
     </div>
   )
 }

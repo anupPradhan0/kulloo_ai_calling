@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getEffectiveApiBaseUrl } from '../api/constants'
 import { DEFAULT_API_BASE_URL } from '../api/constants'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import {
   claimAgentSession,
   heartbeatAgentSession,
@@ -18,7 +19,16 @@ import { IncomingCallModal } from '../components/IncomingCallModal'
 import { ActiveCallPanel } from '../components/ActiveCallPanel'
 import './AgentPage.css'
 
-function AgentPageContent({ baseUrl, onBaseUrlChange }: { baseUrl: string; onBaseUrlChange: (url: string) => void }) {
+function AgentPageContent({
+  baseUrl,
+  apiBase,
+  onBaseUrlChange,
+}: {
+  baseUrl: string
+  /** Debounced origin used for API / WS / SIP (avoids reconnect on every keystroke). */
+  apiBase: string
+  onBaseUrlChange: (url: string) => void
+}) {
   const [refreshToken, setRefreshToken] = useState(0)
   const bumpHistory = () => setRefreshToken((n) => n + 1)
   const { activeSession } = useSip()
@@ -40,7 +50,7 @@ function AgentPageContent({ baseUrl, onBaseUrlChange }: { baseUrl: string; onBas
             ) so Plivo fetches XML and routes the call (IVR or dial Kamailio / FreeSWITCH).
           </aside>
         </div>
-        <StatusToggle baseUrl={baseUrl} />
+        <StatusToggle baseUrl={apiBase} />
       </header>
 
       <div className="agent-layout">
@@ -60,11 +70,11 @@ function AgentPageContent({ baseUrl, onBaseUrlChange }: { baseUrl: string; onBas
           {activeSession ? (
             <ActiveCallPanel />
           ) : (
-            <PhoneDialer baseUrl={baseUrl} onCallPlaced={bumpHistory} />
+            <PhoneDialer baseUrl={apiBase} onCallPlaced={bumpHistory} />
           )}
         </div>
         <div className="agent-column agent-column--history">
-          <CallHistoryPanel baseUrl={baseUrl} refreshToken={refreshToken} />
+          <CallHistoryPanel baseUrl={apiBase} refreshToken={refreshToken} />
         </div>
       </div>
       <AgentDebugPanel />
@@ -74,16 +84,20 @@ function AgentPageContent({ baseUrl, onBaseUrlChange }: { baseUrl: string; onBas
 
 type ClaimState = 'loading' | 'ready' | 'blocked'
 
+const API_BASE_DEBOUNCE_MS = 450
+
 export function AgentPage() {
   const [baseUrl, setBaseUrl] = useState(DEFAULT_API_BASE_URL)
+  const apiBase = useDebouncedValue(baseUrl, API_BASE_DEBOUNCE_MS)
   const sessionId = useMemo(() => getOrCreateAgentSessionId(), [])
   const [claim, setClaim] = useState<ClaimState>('loading')
 
   const tryClaim = useCallback(async () => {
-    setClaim('loading')
+    // Stay on the workstation UI during reclaim after the debounced URL changes (no full-page flash).
+    setClaim((s) => (s === 'ready' ? 'ready' : 'loading'))
     agentDebugLog(`session/claim request (sessionId=${sessionId.slice(0, 8)}…)`)
     try {
-      const { ok } = await claimAgentSession(baseUrl, sessionId)
+      const { ok } = await claimAgentSession(apiBase, sessionId)
       if (ok) {
         agentDebugLog('session/claim OK — single-agent lock acquired')
       } else {
@@ -94,7 +108,7 @@ export function AgentPage() {
       agentDebugLog(`session/claim error: ${e instanceof Error ? e.message : String(e)}`)
       setClaim('blocked')
     }
-  }, [baseUrl, sessionId])
+  }, [apiBase, sessionId])
 
   useEffect(() => {
     void tryClaim()
@@ -103,19 +117,19 @@ export function AgentPage() {
   useEffect(() => {
     if (claim !== 'ready') return
     const t = window.setInterval(() => {
-      void heartbeatAgentSession(baseUrl, sessionId).catch((e) => {
+      void heartbeatAgentSession(apiBase, sessionId).catch((e) => {
         agentDebugLog(`session/heartbeat failed: ${e instanceof Error ? e.message : String(e)} — lock may be lost`)
         setClaim('blocked')
       })
     }, 25_000)
     return () => window.clearInterval(t)
-  }, [claim, baseUrl, sessionId])
+  }, [claim, apiBase, sessionId])
 
   useEffect(() => {
     return () => {
-      void releaseAgentSession(baseUrl, sessionId)
+      void releaseAgentSession(apiBase, sessionId)
     }
-  }, [baseUrl, sessionId])
+  }, [apiBase, sessionId])
 
   if (claim === 'loading') {
     return (
@@ -141,9 +155,13 @@ export function AgentPage() {
   }
 
   return (
-    <AgentWsProvider baseUrl={baseUrl}>
-      <SipProvider baseUrl={baseUrl} agentSessionId={sessionId}>
-        <AgentPageContent baseUrl={baseUrl} onBaseUrlChange={setBaseUrl} />
+    <AgentWsProvider baseUrl={apiBase}>
+      <SipProvider baseUrl={apiBase} agentSessionId={sessionId}>
+        <AgentPageContent
+          baseUrl={baseUrl}
+          apiBase={apiBase}
+          onBaseUrlChange={setBaseUrl}
+        />
       </SipProvider>
     </AgentWsProvider>
   )
