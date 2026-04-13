@@ -27,7 +27,7 @@ function callerDisplay(
 const SIP_BRIDGE_HINT_AFTER_MS = 12_000
 
 export function IncomingCallModal() {
-  const { pendingInvitation, acceptCall, rejectCall, sipStatus } = useSip()
+  const { pendingInvitation, acceptCall, rejectCall, sipStatus, activeSession } = useSip()
   const { liveCall } = useAgentWs()
   const [showBridgeHint, setShowBridgeHint] = useState(false)
 
@@ -43,7 +43,8 @@ export function IncomingCallModal() {
     return () => window.clearTimeout(t)
   }, [waitingForSip, liveCall?.callId])
 
-  if (!liveCall && !pendingInvitation) return null
+  // Hide modal when: nothing is happening, OR the call is already connected (active session)
+  if ((!liveCall && !pendingInvitation) || activeSession) return null
 
   const { from, to } = callerDisplay(liveCall, pendingInvitation)
 
