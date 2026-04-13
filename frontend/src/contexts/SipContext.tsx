@@ -140,9 +140,10 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           sessionDescriptionHandlerFactoryOptions: {
             peerConnectionConfiguration: {
               iceServers,
-              // TURN is available as fallback but don't force relay — direct ICE
-              // works for audio. Forced relay fails instantly on this VPS (hairpin
-              // NAT or firewall blocks coturn relay ports).
+              // Force relay through TURN so ICE consent checks go to coturn
+              // (FreeSWITCH does not respond to STUN consent checks → 30s drop).
+              // coturn must have --external-ip set to the VPS public IP.
+              ...(hasTurn ? { iceTransportPolicy: 'relay' as RTCIceTransportPolicy } : {}),
             },
             iceGatheringTimeout: 5000,
           },
