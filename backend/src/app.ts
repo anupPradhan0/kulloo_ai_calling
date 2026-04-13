@@ -46,5 +46,15 @@ app.get("/api/recordings/", listAllRecordings);
 
 app.use("/api", apiRouter);
 
+// WebSocket paths are handled by ws library on the http.Server level (see server.ts).
+// This middleware prevents Express from sending 404s on the upgraded socket.
+app.use("/ws", (_req, res) => {
+  // If we reach here, the upgrade didn't happen (ws library didn't intercept).
+  // This shouldn't happen normally, but return 400 to avoid 404 handler running.
+  if (!res.headersSent) {
+    res.status(400).send("WebSocket upgrade required");
+  }
+});
+
 app.use(notFoundHandler);
 app.use(errorHandler);
