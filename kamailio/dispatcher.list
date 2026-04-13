@@ -36,7 +36,8 @@
 ##
 
 # Set 1: FreeSWITCH media server pool
-# All instances are identical in role — dispatcher uses round-robin (alg=4)
+# For WebRTC agent mode: only fs1 is active (holds WSS registrations on :7443).
+# fs2 is marked inactive (flags=2) so inbound PSTN always bridges to fs1.
 
 1  sip:fs1:5070  0  0  duid=fs1;role=media
-1  sip:fs2:5070  0  0  duid=fs2;role=media
+1  sip:fs2:5070  2  0  duid=fs2;role=media

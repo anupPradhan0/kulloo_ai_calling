@@ -202,7 +202,11 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
     const invitation = pendingInvitation
     setPendingInvitation(null)
 
-    await invitation.accept()
+    await invitation.accept({
+      sessionDescriptionHandlerOptions: {
+        constraints: { audio: true, video: false },
+      },
+    })
     setActiveSession(invitation)
     // Slight delay to let ICE settle before attaching audio
     setTimeout(() => attachRemoteAudio(invitation), 300)
