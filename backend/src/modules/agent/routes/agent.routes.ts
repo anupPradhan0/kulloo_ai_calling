@@ -10,6 +10,7 @@
 
 /** Layer: routing only — thin handlers. */
 import { Router, Request, Response } from "express";
+import { createHmac } from "crypto";
 import { env } from "../../../config/env";
 import { logger } from "../../../utils/logger";
 import {
@@ -126,6 +127,20 @@ agentRouter.get("/credentials", async (req: Request, res: Response) => {
     }
   }
 
+  // Generate time-limited TURN credentials (coturn use-auth-secret)
+  let turnServers: { urls: string; username: string; credential: string }[] = [];
+  if (env.turnServerUrl && env.turnSecret) {
+    const ttl = env.turnCredentialTtl;
+    const expiry = Math.floor(Date.now() / 1000) + ttl;
+    const turnUsername = `${expiry}:kulloo-agent`;
+    const turnCredential = createHmac("sha1", env.turnSecret)
+      .update(turnUsername)
+      .digest("base64");
+    turnServers = [
+      { urls: env.turnServerUrl, username: turnUsername, credential: turnCredential },
+    ];
+  }
+
   res.json({
     success: true,
     data: {
@@ -134,6 +149,7 @@ agentRouter.get("/credentials", async (req: Request, res: Response) => {
       username: env.agentSipUsername,
       password: env.agentSipPassword,
       stunServer: env.stunServerUrl,
+      turnServers,
     },
   });
 });

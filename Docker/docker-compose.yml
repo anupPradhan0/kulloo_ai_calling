@@ -183,6 +183,21 @@ services:
     depends_on:
       - api
 
+  # TURN relay server — required for WebRTC agent mode.
+  # FreeSWITCH does not respond to ICE consent freshness checks, so browsers
+  # drop the call after 30s. Coturn relays media and handles STUN keepalives.
+  coturn:
+    image: coturn/coturn:latest
+    container_name: kulloo-coturn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    environment:
+      TURN_SECRET: ${TURN_SECRET:-kulloo-turn-secret-change-me}
+      TURN_REALM: ${TURN_REALM:-kulloocall.anuppradhan.in}
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
   kamailio:
     # Docker Hub `kamailio/kamailio` is no longer pullable anonymously — use GHCR official image.
     image: ghcr.io/kamailio/kamailio:5.8.7-bookworm

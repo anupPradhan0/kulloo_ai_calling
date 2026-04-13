@@ -104,6 +104,7 @@ export type AgentCredentials = {
   username: string
   password: string
   stunServer: string
+  turnServers?: { urls: string; username: string; credential: string }[]
 }
 
 export async function fetchAgentCredentials(
