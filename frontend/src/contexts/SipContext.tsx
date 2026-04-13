@@ -120,16 +120,6 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
         const uri = UserAgent.makeURI(`sip:${creds.username}@${creds.domain}`)
         if (!uri) throw new Error('Invalid SIP URI from credentials')
 
-        // Build ICE server list: STUN + TURN (if configured)
-        const iceServers: RTCIceServer[] = [{ urls: creds.stunServer }]
-        const hasTurn = Array.isArray(creds.turnServers) && creds.turnServers.length > 0
-        if (hasTurn) {
-          for (const t of creds.turnServers!) {
-            iceServers.push({ urls: t.urls, username: t.username, credential: t.credential })
-          }
-          agentDebugLog(`TURN configured: ${creds.turnServers!.map(t => t.urls).join(', ')}`)
-        }
-
         const ua = new UserAgent({
           uri,
           authorizationUsername: creds.username,
@@ -139,7 +129,7 @@ export function SipProvider({ baseUrl, agentSessionId, children }: Props) {
           },
           sessionDescriptionHandlerFactoryOptions: {
             peerConnectionConfiguration: {
-              iceServers,
+              iceServers: [{ urls: creds.stunServer }],
             },
             iceGatheringTimeout: 5000,
           },

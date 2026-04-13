@@ -173,20 +173,17 @@ export const env = {
    */
   stunServerUrl: process.env.STUN_SERVER_URL?.trim() || "stun:stun.l.google.com:19302",
   /**
-   * TURN server URL for WebRTC relay. Required because FreeSWITCH does not
-   * handle ICE consent freshness checks, causing browsers to drop after 30s.
-   * Example: turn:kulloocall.anuppradhan.in:3478
+   * Kamailio WSS URL for agent browser registration (replaces FreeSWITCH WSS).
+   * Kamailio + rtpengine handle ICE/DTLS/SRTP for the browser, fixing the 30s timeout.
+   * Example: wss://kulloocall.anuppradhan.in:5063
    */
-  turnServerUrl: process.env.TURN_SERVER_URL?.trim() || "",
+  kamailioWssUrl: process.env.KAMAILIO_WSS_URL?.trim() || "",
   /**
-   * Shared secret for coturn time-limited TURN credentials (use-auth-secret).
-   * Must match static-auth-secret in turnserver.conf.
+   * Kamailio host:port for the ESL bridge B-leg (FreeSWITCH → Kamailio → rtpengine → browser).
+   * Must be reachable from the FreeSWITCH container. With Kamailio on network_mode: host,
+   * use the host IP visible from Docker (e.g., 187.127.150.91:5060 or host.docker.internal:5060).
    */
-  turnSecret: process.env.TURN_SECRET?.trim() || "",
-  /**
-   * TTL in seconds for generated TURN credentials (default 24h).
-   */
-  turnCredentialTtl: parseInt(process.env.TURN_CREDENTIAL_TTL_SEC ?? "86400", 10),
+  kamailioInternalHost: process.env.KAMAILIO_INTERNAL_HOST?.trim() || "",
   /**
    * When true, only one browser session (X-Agent-Session-Id) may fetch /api/agent/credentials at a time (Redis).
    * Prevents two operators registering the same SIP agent extension. Default true in production-minded setups.
